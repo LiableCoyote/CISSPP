@@ -82,13 +82,15 @@ export default function DashboardPage() {
       <InstallPrompt />
 
       {/* Countdown hero */}
-      <div className="card mb-4 text-center py-5 md:py-8 shadow-glow border-2 border-accent">
-        <p className="text-dim text-xs uppercase tracking-wider">Days Until Exam</p>
-        <p className={`text-6xl md:text-7xl font-bold ${countdownColor} my-1`}>{daysUntilExam}</p>
+      <section aria-labelledby="countdown-heading" className="card mb-4 text-center py-5 md:py-8 shadow-glow border-2 border-accent">
+        <h2 id="countdown-heading" className="text-dim text-xs uppercase tracking-wider font-medium">Days Until Exam</h2>
+        <p className={`text-6xl md:text-7xl font-bold ${countdownColor} my-1`} aria-label={`${daysUntilExam} days until exam`}>
+          {daysUntilExam}
+        </p>
         <p className="text-sm text-dim">
           Day {Math.min(56, daysSinceStart + 1)} of 56 · Week {currentWeek} · Day {currentDay}
         </p>
-      </div>
+      </section>
 
       {/* Level progress */}
       <div className="card mb-4">
@@ -102,7 +104,15 @@ export default function DashboardPage() {
             <p className="font-bold text-xp">{profile.xp}</p>
           </div>
         </div>
-        <div className="h-3 bg-panel2 rounded-full overflow-hidden">
+        <div
+          className="h-3 bg-panel2 rounded-full overflow-hidden"
+          role="progressbar"
+          aria-label="XP progress to next level"
+          aria-valuenow={Math.round(levelProgress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuetext={`${xpInLevel} of ${xpRange} XP toward level ${level + 1}`}
+        >
           <div
             className="h-full bg-gradient-to-r from-xp to-accent2 transition-all"
             style={{ width: `${levelProgress}%` }}
@@ -131,9 +141,11 @@ export default function DashboardPage() {
 
       {/* Domain hoarder warning */}
       {hoarderAlert && (
-        <div className="card mb-4 border-warn/40 bg-warn/5">
+        <div className="card mb-4 border-warn/40 bg-warn/5" role="alert">
           <p className="text-sm">
-            <span className="font-semibold text-warn">⚠ Domain Hoarder Alert: </span>
+            <span className="font-semibold text-warn">
+              <span aria-hidden="true">⚠ </span>Domain Hoarder Alert:{" "}
+            </span>
             You've drilled Domain {hoarderDomain} more than 60% of the past week. Time to rotate.
           </p>
         </div>
@@ -170,17 +182,19 @@ export default function DashboardPage() {
 
       {/* Radar */}
       {radarData.some((r) => r.mastery > 0) && (
-        <div className="card mb-4">
-          <h3 className="font-semibold mb-2">Domain Mastery</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <RadarChart data={radarData} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
-              <PolarGrid stroke="#243046" />
-              <PolarAngleAxis dataKey="domain" stroke="#8b97ab" fontSize={11} />
-              <PolarRadiusAxis domain={[0, 100]} tick={false} stroke="#243046" />
-              <Radar dataKey="mastery" fill="#6ee7b7" fillOpacity={0.3} stroke="#6ee7b7" strokeWidth={2} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
+        <section aria-labelledby="mastery-heading" className="card mb-4">
+          <h3 id="mastery-heading" className="font-semibold mb-2">Domain Mastery</h3>
+          <div role="img" aria-label={`Domain mastery chart: ${radarData.map(r => `${r.domain} ${r.mastery}%`).join(", ")}`}>
+            <ResponsiveContainer width="100%" height={240}>
+              <RadarChart data={radarData} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
+                <PolarGrid stroke="#243046" />
+                <PolarAngleAxis dataKey="domain" stroke="#8b97ab" fontSize={11} />
+                <PolarRadiusAxis domain={[0, 100]} tick={false} stroke="#243046" />
+                <Radar dataKey="mastery" fill="#6ee7b7" fillOpacity={0.3} stroke="#6ee7b7" strokeWidth={2} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
       )}
 
       {/* Next boss */}

@@ -126,4 +126,57 @@
   .animate-flicker {
     animation: flicker 1.2s ease-in-out infinite;
   }
+
+  /* Screen-reader-only content */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Visible only when focused (skip links) */
+  .sr-only-focusable:focus,
+  .sr-only-focusable:focus-visible {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    height: auto;
+    padding: 0.75rem 1rem;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    @apply bg-accent text-bg font-semibold rounded-lg z-[100];
+  }
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-flicker {
+    animation: none !important;
+  }
+}
+
+/* High-contrast outline on interactive elements when forced-colors is on */
+@media (forced-colors: active) {
+  .btn,
+  .list-row,
+  .card {
+    border: 1px solid CanvasText;
+  }
 }

@@ -26,26 +26,44 @@ export default function Header() {
     : 0;
 
   return (
-    <header className="sticky top-0 z-30 bg-bg/80 backdrop-blur border-b border-border safe-top">
+    <header
+      role="banner"
+      className="sticky top-0 z-30 bg-bg/80 backdrop-blur border-b border-border safe-top"
+    >
       <div className="max-w-6xl mx-auto flex items-center justify-between px-4 md:px-8 h-14">
-        <Link to="/" className="flex items-center gap-2 font-bold text-lg">
-          <span className="text-accent">◆</span>
+        <Link to="/" className="flex items-center gap-2 font-bold text-lg" aria-label="CISSPP home">
+          <span className="text-accent" aria-hidden="true">◆</span>
           <span className="hidden sm:inline">CISSPP</span>
         </Link>
-        <div className="flex items-center gap-2 text-sm">
+        <div
+          className="flex items-center gap-2 text-sm"
+          role="status"
+          aria-live="polite"
+          aria-atomic="false"
+        >
           {!online && (
-            <span className="pill bg-warn/20 text-warn">Offline</span>
+            <span className="pill bg-warn/20 text-warn" role="alert">
+              <span className="sr-only">Status: </span>Offline
+            </span>
           )}
           <span className="pill bg-panel2 text-dim hidden sm:inline-flex">
-            L{level} · {levelTitle}
+            <span className="sr-only">Level </span>L{level}
+            <span className="sr-only">, </span>
+            <span aria-hidden="true"> · </span>
+            {levelTitle}
           </span>
-          <span className="pill bg-accent/15 text-accent font-semibold">
-            🔥 {profile.streak}
+          <span className="pill bg-accent/15 text-accent font-semibold" aria-label={`${profile.streak} day streak`}>
+            <span aria-hidden="true">🔥 </span>
+            {profile.streak}
           </span>
-          <span className="pill bg-xp/15 text-xp font-semibold hidden sm:inline-flex">
-            ⚡ {profile.xp} XP
+          <span className="pill bg-xp/15 text-xp font-semibold hidden sm:inline-flex" aria-label={`${profile.xp} experience points`}>
+            <span aria-hidden="true">⚡ </span>
+            {profile.xp} XP
           </span>
-          <span className="pill bg-accent2/15 text-accent2 font-semibold">
+          <span
+            className="pill bg-accent2/15 text-accent2 font-semibold"
+            aria-label={daysUntilExam > 0 ? `${daysUntilExam} days until exam` : "Exam day"}
+          >
             {daysUntilExam > 0 ? `${daysUntilExam}d` : "Exam!"}
           </span>
         </div>

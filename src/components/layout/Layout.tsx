@@ -6,10 +6,15 @@ import Header from "./Header";
 export default function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen">
+      <a href="#main-content" className="sr-only sr-only-focusable">
+        Skip to main content
+      </a>
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
-        <main className="flex-1">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+          {children}
+        </main>
         <BottomNav />
       </div>
     </div>

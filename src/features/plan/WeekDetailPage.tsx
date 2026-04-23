@@ -95,7 +95,7 @@ export default function WeekDetailPage() {
                 <h3 className="font-semibold">Day {day}</h3>
                 {dayComplete && <span className="pill bg-high/15 text-high">✓ Complete</span>}
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-2" role="list">
                 {dayQuests.map((q) => (
                   <li
                     key={q.id}
@@ -107,21 +107,23 @@ export default function WeekDetailPage() {
                   >
                     <button
                       onClick={() => (q.completedAt ? undoQuest(q) : completeQuest(q))}
+                      role="checkbox"
+                      aria-checked={!!q.completedAt}
+                      aria-label={`${q.title}. ${q.completedAt ? "Completed" : "Not completed"}. Worth ${q.xp} XP.`}
                       className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
                         q.completedAt
                           ? "bg-high border-high text-bg"
                           : "border-border hover:border-accent"
                       }`}
-                      aria-label={q.completedAt ? "Mark incomplete" : "Mark complete"}
                     >
-                      {q.completedAt && "✓"}
+                      <span aria-hidden="true">{q.completedAt && "✓"}</span>
                     </button>
                     <div className="flex-1 min-w-0">
                       <p className={`font-medium ${q.completedAt ? "line-through text-dim" : ""}`}>
                         {q.title}
                       </p>
                       <p className="text-sm text-dim mt-0.5">{q.description}</p>
-                      <div className="flex gap-1 mt-2 flex-wrap">
+                      <div className="flex gap-1 mt-2 flex-wrap" aria-hidden="true">
                         <span className="chip">{q.type}</span>
                         <span className="chip bg-xp/15 text-xp">+{q.xp} XP</span>
                         {q.domainIds.length > 0 && q.domainIds.length <= 3 && (

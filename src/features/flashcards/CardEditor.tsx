@@ -35,30 +35,37 @@ export default function CardEditor() {
 
   return (
     <div className="page max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Add Flashcard</h1>
-      <form onSubmit={save} className="space-y-4">
+      <h1 id="editor-heading" className="text-2xl font-bold mb-6">Add Flashcard</h1>
+      <form onSubmit={save} className="space-y-4" aria-labelledby="editor-heading">
         <div>
-          <label className="block text-sm text-dim mb-1">Front (question)</label>
+          <label htmlFor="card-front" className="block text-sm text-dim mb-1">Front (question)</label>
           <textarea
+            id="card-front"
             value={front}
             onChange={(e) => setFront(e.target.value)}
             className="input min-h-[96px]"
             placeholder="e.g. ALE formula"
             autoFocus
+            required
+            aria-required="true"
           />
         </div>
         <div>
-          <label className="block text-sm text-dim mb-1">Back (answer)</label>
+          <label htmlFor="card-back" className="block text-sm text-dim mb-1">Back (answer)</label>
           <textarea
+            id="card-back"
             value={back}
             onChange={(e) => setBack(e.target.value)}
             className="input min-h-[120px]"
             placeholder="e.g. ALE = SLE × ARO"
+            required
+            aria-required="true"
           />
         </div>
         <div>
-          <label className="block text-sm text-dim mb-1">Domain (optional)</label>
+          <label htmlFor="card-domain" className="block text-sm text-dim mb-1">Domain (optional)</label>
           <select
+            id="card-domain"
             value={domainId}
             onChange={(e) => setDomainId(e.target.value === "" ? "" : (parseInt(e.target.value) as DomainId))}
             className="input"
@@ -72,8 +79,9 @@ export default function CardEditor() {
           </select>
         </div>
         <div>
-          <label className="block text-sm text-dim mb-1">Tags (comma-separated)</label>
+          <label htmlFor="card-tags" className="block text-sm text-dim mb-1">Tags (comma-separated)</label>
           <input
+            id="card-tags"
             type="text"
             value={tagsStr}
             onChange={(e) => setTagsStr(e.target.value)}

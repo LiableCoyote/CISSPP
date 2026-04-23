@@ -96,14 +96,28 @@ export default function SettingsPage() {
     <div className="page max-w-2xl">
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
-      <div className="card mb-4">
-        <h3 className="font-semibold mb-3">Profile</h3>
-        <label className="block text-sm text-dim mb-1">Display name</label>
-        <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="input mb-3" />
-        <label className="block text-sm text-dim mb-1">Exam date</label>
-        <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="input mb-3" />
-        <label className="block text-sm text-dim mb-1">Daily goal (minutes)</label>
+      <section aria-labelledby="profile-heading" className="card mb-4">
+        <h2 id="profile-heading" className="font-semibold mb-3">Profile</h2>
+        <label htmlFor="display-name" className="block text-sm text-dim mb-1">Display name</label>
         <input
+          id="display-name"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          className="input mb-3"
+        />
+        <label htmlFor="exam-date" className="block text-sm text-dim mb-1">Exam date</label>
+        <input
+          id="exam-date"
+          type="date"
+          value={examDate}
+          onChange={(e) => setExamDate(e.target.value)}
+          className="input mb-3"
+        />
+        <label htmlFor="daily-goal" className="block text-sm text-dim mb-1">
+          Daily goal: <span className="font-semibold text-ink">{dailyGoal} minutes</span>
+        </label>
+        <input
+          id="daily-goal"
           type="range"
           min={30}
           max={360}
@@ -111,11 +125,13 @@ export default function SettingsPage() {
           value={dailyGoal}
           onChange={(e) => setDailyGoal(parseInt(e.target.value))}
           className="w-full"
+          aria-valuetext={`${dailyGoal} minutes per day`}
         />
-        <p className="text-sm text-dim mb-3">{dailyGoal} minutes</p>
-        <button onClick={save} className="btn-primary w-full">Save</button>
-        {importStatus && <p className="text-sm text-accent mt-2">{importStatus}</p>}
-      </div>
+        <button onClick={save} className="btn-primary w-full mt-3">Save</button>
+        <div role="status" aria-live="polite" className="min-h-[1.25rem]">
+          {importStatus && <p className="text-sm text-accent mt-2">{importStatus}</p>}
+        </div>
+      </section>
 
       <div className="card mb-4">
         <h3 className="font-semibold mb-1">Daily Reminder</h3>
@@ -123,8 +139,9 @@ export default function SettingsPage() {
           Enable a daily notification to keep your streak alive. Browser permission required.
         </p>
         <div className="flex items-center justify-between gap-3">
-          <label className="text-sm text-dim">Reminder time</label>
+          <label htmlFor="reminder-time" className="text-sm text-dim">Reminder time</label>
           <input
+            id="reminder-time"
             type="time"
             value={reminderTime}
             onChange={(e) => {

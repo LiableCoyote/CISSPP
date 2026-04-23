@@ -116,13 +116,15 @@ export default function QuizReviewPage() {
                   </p>
                   <p className="text-xs text-dim mb-3">{q.explanation}</p>
 
-                  <div className="flex gap-2 flex-wrap">
-                    <p className="text-xs text-dim w-full">Mark miss as:</p>
+                  <div className="flex gap-2 flex-wrap" role="radiogroup" aria-label={`Categorize this miss for question ${q.id}`}>
+                    <p className="text-xs text-dim w-full" id={`miss-cat-${a.id}`}>Mark miss as:</p>
                     {(["mindset", "knowledge", "misread"] as const).map((cat) => (
                       <button
                         key={cat}
+                        role="radio"
+                        aria-checked={a.missCategory === cat}
                         onClick={() => setMissCategory(a.id, cat)}
-                        className={`pill text-xs px-3 py-1 ${
+                        className={`pill text-xs px-3 py-1 min-h-[32px] ${
                           a.missCategory === cat
                             ? "bg-accent text-bg"
                             : "bg-panel2 text-dim hover:bg-border"
@@ -133,9 +135,10 @@ export default function QuizReviewPage() {
                     ))}
                     <button
                       onClick={() => addToFlashcards(a)}
-                      className="pill text-xs bg-xp/15 text-xp px-3 py-1 hover:bg-xp/25 ml-auto"
+                      aria-label="Add this missed question to flashcards"
+                      className="pill text-xs bg-xp/15 text-xp px-3 py-1 hover:bg-xp/25 ml-auto min-h-[32px]"
                     >
-                      + Flashcard
+                      <span aria-hidden="true">+ </span>Flashcard
                     </button>
                   </div>
                 </div>

@@ -133,10 +133,10 @@ export default function ReviewSession() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-between p-4 pb-20 md:pb-8">
       <div className="w-full max-w-lg flex items-center justify-between">
-        <button onClick={() => navigate("/flashcards")} className="text-dim hover:text-ink">
-          ← Exit
+        <button onClick={() => navigate("/flashcards")} className="text-dim hover:text-ink" aria-label="Exit review session">
+          <span aria-hidden="true">← </span>Exit
         </button>
-        <span className="text-sm text-dim">
+        <span className="text-sm text-dim" aria-label={`Card ${idx + 1} of ${dueCards.length}`} aria-live="polite">
           {idx + 1} / {dueCards.length}
         </span>
       </div>
@@ -149,12 +149,22 @@ export default function ReviewSession() {
           dragElastic={0.8}
           onDragEnd={onDragEnd}
           style={{ x, y, rotate, opacity }}
-          className="w-full aspect-[3/4] card bg-panel2 shadow-glow flex flex-col items-center justify-center text-center p-6 cursor-grab active:cursor-grabbing select-none"
+          role="button"
+          tabIndex={0}
+          aria-label={revealed ? `Answer: ${card.back}. Use grade buttons or keys 1-4.` : `Question: ${card.front}. Press Space or Enter to reveal.`}
+          aria-live="polite"
+          className="w-full aspect-[3/4] card bg-panel2 shadow-glow flex flex-col items-center justify-center text-center p-6 cursor-grab active:cursor-grabbing select-none focus-visible:ring-4 focus-visible:ring-accent"
           onClick={() => !revealed && setRevealed(true)}
+          onKeyDown={(e) => {
+            if ((e.key === " " || e.key === "Enter") && !revealed) {
+              e.preventDefault();
+              setRevealed(true);
+            }
+          }}
         >
           <div className="flex-1 flex items-center justify-center w-full">
             <div>
-              <p className="text-xs uppercase tracking-wider text-dim mb-3">
+              <p className="text-xs uppercase tracking-wider text-dim mb-3 font-medium">
                 {revealed ? "Answer" : "Front"}
               </p>
               <p className="text-xl font-semibold">
@@ -163,41 +173,47 @@ export default function ReviewSession() {
             </div>
           </div>
           {!revealed && (
-            <p className="text-xs text-dim mt-4">Tap or press Space to reveal</p>
+            <p className="text-xs text-dim mt-4" aria-hidden="true">Tap or press Space to reveal</p>
           )}
           {card.domainId && (
             <div className="absolute top-3 right-3">
-              <span className="chip text-[10px]">D{card.domainId}</span>
+              <span className="chip text-[10px]">
+                <span className="sr-only">Domain </span>D{card.domainId}
+              </span>
             </div>
           )}
         </motion.div>
       </div>
 
       {revealed ? (
-        <div className="w-full max-w-lg grid grid-cols-4 gap-2">
-          <button onClick={() => grade(0)} className="btn-ghost !bg-danger/15 text-danger flex-col py-3 text-xs">
-            <span className="text-lg">❌</span>
+        <div
+          role="group"
+          aria-label="Grade this card"
+          className="w-full max-w-lg grid grid-cols-4 gap-2"
+        >
+          <button onClick={() => grade(0)} aria-label="Again — grade 1 of 4 — I did not know this" aria-keyshortcuts="1" className="btn-ghost !bg-danger/15 text-danger flex-col py-3 text-xs">
+            <span className="text-lg" aria-hidden="true">❌</span>
             Again
-            <span className="text-[10px] text-dim">1</span>
+            <span className="text-[10px] text-dim" aria-hidden="true">1</span>
           </button>
-          <button onClick={() => grade(1)} className="btn-ghost !bg-warn/15 text-warn flex-col py-3 text-xs">
-            <span className="text-lg">😞</span>
+          <button onClick={() => grade(1)} aria-label="Hard — grade 2 of 4" aria-keyshortcuts="2" className="btn-ghost !bg-warn/15 text-warn flex-col py-3 text-xs">
+            <span className="text-lg" aria-hidden="true">😞</span>
             Hard
-            <span className="text-[10px] text-dim">2</span>
+            <span className="text-[10px] text-dim" aria-hidden="true">2</span>
           </button>
-          <button onClick={() => grade(3)} className="btn-ghost !bg-accent/15 text-accent flex-col py-3 text-xs">
-            <span className="text-lg">✅</span>
+          <button onClick={() => grade(3)} aria-label="Good — grade 3 of 4" aria-keyshortcuts="3" className="btn-ghost !bg-accent/15 text-accent flex-col py-3 text-xs">
+            <span className="text-lg" aria-hidden="true">✅</span>
             Good
-            <span className="text-[10px] text-dim">3</span>
+            <span className="text-[10px] text-dim" aria-hidden="true">3</span>
           </button>
-          <button onClick={() => grade(4)} className="btn-ghost !bg-high/15 text-high flex-col py-3 text-xs">
-            <span className="text-lg">🔥</span>
+          <button onClick={() => grade(4)} aria-label="Perfect — grade 4 of 4 — I knew this cold" aria-keyshortcuts="4" className="btn-ghost !bg-high/15 text-high flex-col py-3 text-xs">
+            <span className="text-lg" aria-hidden="true">🔥</span>
             Perfect
-            <span className="text-[10px] text-dim">4</span>
+            <span className="text-[10px] text-dim" aria-hidden="true">4</span>
           </button>
         </div>
       ) : (
-        <div className="text-xs text-dim text-center">
+        <div className="text-xs text-dim text-center" aria-hidden="true">
           Swipe: ← Again · → Good · ↑ Perfect · ↓ Hard
         </div>
       )}

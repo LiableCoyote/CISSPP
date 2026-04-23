@@ -21,21 +21,24 @@ export default function QuizLauncherPage() {
       </p>
 
       {/* Domain drill */}
-      <div className="card mb-4">
-        <h3 className="font-semibold mb-1">Domain Drill</h3>
+      <section aria-labelledby="drill-heading" className="card mb-4">
+        <h3 id="drill-heading" className="font-semibold mb-1">Domain Drill</h3>
         <p className="text-sm text-dim mb-3">25 questions focused on a single domain.</p>
-        <div className="grid grid-cols-2 gap-2">
+        <div role="radiogroup" aria-labelledby="drill-heading" className="grid grid-cols-2 gap-2">
           {DOMAINS.map((d) => (
             <button
               key={d.id}
+              role="radio"
+              aria-checked={selectedDomain === d.id}
               onClick={() => setSelectedDomain(d.id)}
+              aria-label={`Domain ${d.id}: ${d.name}. ${d.weight} percent of exam. ${d.priority} priority.`}
               className={`p-3 rounded-lg border text-left transition-colors ${
                 selectedDomain === d.id
                   ? "border-accent bg-accent/10"
                   : "border-border bg-panel2 hover:border-accent/50"
               }`}
             >
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1" aria-hidden="true">
                 <span className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold" style={{ backgroundColor: d.accent + "33", color: d.accent }}>
                   D{d.id}
                 </span>
@@ -44,7 +47,7 @@ export default function QuizLauncherPage() {
                   <span className="pill bg-danger/15 text-danger text-[9px]">HIGH</span>
                 )}
               </div>
-              <p className="text-sm font-medium line-clamp-2">{d.name}</p>
+              <p className="text-sm font-medium line-clamp-2" aria-hidden="true">{d.name}</p>
             </button>
           ))}
         </div>
@@ -52,10 +55,11 @@ export default function QuizLauncherPage() {
           onClick={() => selectedDomain && start("domain", selectedDomain)}
           disabled={!selectedDomain}
           className="btn-primary w-full mt-3 disabled:opacity-50"
+          aria-label={selectedDomain ? `Start domain drill for domain ${selectedDomain}` : "Select a domain first"}
         >
           Start Domain Drill →
         </button>
-      </div>
+      </section>
 
       {/* Mixed set */}
       <button
