@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    background-image:
+      radial-gradient(at 10% -10%, rgba(110, 231, 183, 0.08) 0, transparent 50%),
+      radial-gradient(at 90% 20%, rgba(167, 139, 250, 0.08) 0, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(56, 189, 248, 0.06) 0, transparent 50%);
+    background-attachment: fixed;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply text-ink font-semibold tracking-tight;
+  }
+  h1 {
+    @apply text-2xl;
+  }
+  h2 {
+    @apply text-xl;
+  }
+  h3 {
+    @apply text-lg;
+  }
+  ::selection {
+    background: rgba(110, 231, 183, 0.35);
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-panel border border-border rounded-xl p-4;
+  }
+  .card-hover {
+    @apply transition-colors hover:border-accent/50;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-bg hover:bg-accent/90;
+  }
+  .btn-ghost {
+    @apply btn bg-panel2 text-ink hover:bg-border;
+  }
+  .btn-outline {
+    @apply btn border border-border text-ink hover:bg-panel2;
+  }
+  .pill {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-panel2 text-dim;
+  }
+  .link {
+    @apply text-accent2 hover:underline underline-offset-2;
+  }
+  .input {
+    @apply w-full rounded-lg bg-panel2 border border-border px-3 py-2 text-ink placeholder:text-dim focus:outline-none focus:border-accent;
+  }
+}
