@@ -1,63 +1,201 @@
+import { Link } from "react-router-dom";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../../db/schema";
 import { useProfile } from "../../state/profile";
+import { DOMAINS } from "../../data/domains";
+import { WEEK_META } from "../../data/weeks";
+import { xpToLevel, LEVEL_XP_THRESHOLDS } from "../../lib/xp";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
+import InstallPrompt from "../../components/InstallPrompt";
+
+const MINDSET_PROMPTS = [
+  "Would a CISO patch the server, or update the policy first?",
+  "You can't pick technical over governance. Always.",
+  "BEST, FIRST, MOST — watch for these every single question.",
+  "When two answers look right, choose the one that reduces organizational risk.",
+  "The exam rewards 'what should a manager do' — not 'what can an admin do'.",
+  "Is your answer a control? Good. Is it the FIRST control? That's better.",
+  "Assess risk → Select control → Implement → Monitor. Always in that order.",
+  "If it feels hard, the algorithm thinks you're strong. Keep going.",
+  "Never spend >90 seconds on one question. Decide and commit.",
+  "Your goal on exam day: think CISO. Not sysadmin. Not engineer. CISO.",
+];
 
 export default function DashboardPage() {
   const { profile } = useProfile();
+  const attempts = useLiveQuery(() => db.attempts.toArray()) || [];
+  const quests = useLiveQuery(() => db.quests.toArray()) || [];
+  const answers = useLiveQuery(() => db.answers.toArray()) || [];
 
   if (!profile) return null;
 
-  const daysUntilExam = profile.examDate
-    ? Math.ceil((new Date(profile.examDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    : 56;
+  const today = new Date();
+  const daysUntilExam = profile.examDate ? differenceInCalendarDays(parseISO(profile.examDate), today) : 56;
+  const daysSinceStart = differenceInCalendarDays(today, parseISO(profile.startDate));
+  const currentWeek = Math.min(8, Math.max(1, Math.floor(daysSinceStart / 7) + 1));
+  const currentDay = Math.min(7, (daysSinceStart % 7) + 1);
+
+  const { level, levelTitle, xpInLevel } = xpToLevel(profile.xp);
+  const nextThreshold = LEVEL_XP_THRESHOLDS[Math.min(level + 1, LEVEL_XP_THRESHOLDS.length - 1)];
+  const levelBase = LEVEL_XP_THRESHOLDS[level];
+  const xpRange = nextThreshold - levelBase;
+  const levelProgress = xpRange > 0 ? Math.min(100, (xpInLevel / xpRange) * 100) : 100;
+
+  // Today's quests
+  const todaysQuests = quests.filter((q) => q.week === currentWeek && q.day === currentDay);
+
+  // Domain mastery radar
+  const radarData = DOMAINS.map((d) => {
+    const ds = attempts.filter((a) => a.domainId === d.id);
+    const avg = ds.length > 0 ? ds.reduce((s, a) => s + a.scorePct, 0) / ds.length : 0;
+    return { domain: `D${d.id}`, mastery: Math.round(avg), weight: d.weight };
+  });
+
+  // CISO score
+  const total = answers.length;
+  const cisoScore = total > 0 ? Math.round(((total - answers.filter((a) => a.flaggedMindset).length) / total) * 100) : 100;
+
+  // Next boss
+  const bossWeeks = [4, 6, 7];
+  const nextBoss = bossWeeks.find((w) => w > currentWeek) || null;
+
+  // Mindset prompt of the day
+  const promptIdx = daysSinceStart % MINDSET_PROMPTS.length;
+
+  // Countdown color
+  const countdownColor = daysUntilExam > 28 ? "text-high" : daysUntilExam > 14 ? "text-warn" : daysUntilExam > 7 ? "text-med" : "text-danger";
+
+  // Domain hoarder check - last 7 days
+  const last7 = attempts.filter((a) => differenceInCalendarDays(today, parseISO(a.startedAt)) <= 7);
+  const domainHoard: Record<number, number> = {};
+  last7.forEach((a) => {
+    if (a.domainId) domainHoard[a.domainId] = (domainHoard[a.domainId] || 0) + 1;
+  });
+  const totalLast7 = Object.values(domainHoard).reduce((a, b) => a + b, 0);
+  const maxD = Math.max(0, ...Object.values(domainHoard));
+  const hoarderAlert = totalLast7 >= 3 && maxD / totalLast7 > 0.6;
+  const hoarderDomain = Object.entries(domainHoard).find(([, v]) => v === maxD)?.[0];
 
   return (
-    <div className="min-h-screen bg-bg text-ink p-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-2">Welcome, {profile.displayName}!</h1>
-        <p className="text-dim mb-8">CISSP Quest — 8 Weeks to Mastery</p>
+    <div className="page">
+      <InstallPrompt />
 
-        {/* Countdown */}
-        <div className="card mb-8 p-6 border-2 border-accent shadow-glow">
-          <p className="text-dim text-sm">Days Until Exam</p>
-          <p className="text-6xl font-bold text-accent">{daysUntilExam}</p>
-          <p className="text-dim text-sm mt-2">Exam Date: {profile.examDate}</p>
-        </div>
+      {/* Countdown hero */}
+      <div className="card mb-4 text-center py-5 md:py-8 shadow-glow border-2 border-accent">
+        <p className="text-dim text-xs uppercase tracking-wider">Days Until Exam</p>
+        <p className={`text-6xl md:text-7xl font-bold ${countdownColor} my-1`}>{daysUntilExam}</p>
+        <p className="text-sm text-dim">
+          Day {Math.min(56, daysSinceStart + 1)} of 56 · Week {currentWeek} · Day {currentDay}
+        </p>
+      </div>
 
-        {/* Profile Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="card p-4">
-            <p className="text-dim text-xs">XP</p>
-            <p className="text-2xl font-bold text-xp">{profile.xp}</p>
+      {/* Level progress */}
+      <div className="card mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <p className="text-xs text-dim">Level {level}</p>
+            <p className="font-semibold">{levelTitle}</p>
           </div>
-          <div className="card p-4">
-            <p className="text-dim text-xs">Level</p>
-            <p className="text-2xl font-bold text-accent2">{profile.level}</p>
-          </div>
-          <div className="card p-4">
-            <p className="text-dim text-xs">Streak</p>
-            <p className="text-2xl font-bold text-streak">{profile.streak}</p>
-          </div>
-          <div className="card p-4">
-            <p className="text-dim text-xs">Longest</p>
-            <p className="text-2xl font-bold text-high">{profile.longestStreak}</p>
+          <div className="text-right">
+            <p className="text-xs text-dim">XP</p>
+            <p className="font-bold text-xp">{profile.xp}</p>
           </div>
         </div>
+        <div className="h-3 bg-panel2 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-xp to-accent2 transition-all"
+            style={{ width: `${levelProgress}%` }}
+          />
+        </div>
+        <p className="text-xs text-dim mt-1 text-right">
+          {xpInLevel} / {xpRange} to next level
+        </p>
+      </div>
 
-        {/* Placeholder: Full pages to come */}
-        <div className="card p-6 text-center">
-          <p className="text-lg font-semibold mb-2">🚀 More features coming soon!</p>
-          <p className="text-dim text-sm">
-            Campaign, Domains, Flashcards, Quiz, Vault, Stats, Resources, and Settings pages are in development.
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="card p-3 text-center">
+          <p className="text-xs text-dim">Streak</p>
+          <p className="text-2xl font-bold text-streak animate-flicker">🔥 {profile.streak}</p>
+        </div>
+        <div className="card p-3 text-center">
+          <p className="text-xs text-dim">Longest</p>
+          <p className="text-2xl font-bold text-high">{profile.longestStreak}</p>
+        </div>
+        <div className="card p-3 text-center">
+          <p className="text-xs text-dim">CISO Score</p>
+          <p className="text-2xl font-bold text-accent">{cisoScore}%</p>
+        </div>
+      </div>
+
+      {/* Domain hoarder warning */}
+      {hoarderAlert && (
+        <div className="card mb-4 border-warn/40 bg-warn/5">
+          <p className="text-sm">
+            <span className="font-semibold text-warn">⚠ Domain Hoarder Alert: </span>
+            You've drilled Domain {hoarderDomain} more than 60% of the past week. Time to rotate.
           </p>
-          <p className="text-dim text-xs mt-4 mb-6">
-            Current build: Core data layer + profile state. Ready for feature expansion.
-          </p>
-          <div className="flex gap-2 justify-center flex-wrap">
-            <span className="chip">Dashboard ✓</span>
-            <span className="chip">~120 CISSP Qs ✓</span>
-            <span className="chip">50+ Flashcards ✓</span>
-            <span className="chip">Dexie DB ✓</span>
-          </div>
         </div>
+      )}
+
+      {/* Today's quests */}
+      <div className="card mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold">Today's Quests</h3>
+          <Link to={`/plan/week/${currentWeek}`} className="text-xs link">
+            Week {currentWeek} →
+          </Link>
+        </div>
+        {todaysQuests.length === 0 ? (
+          <p className="text-sm text-dim">No quests scheduled for today. Visit the Campaign page.</p>
+        ) : (
+          <ul className="space-y-2">
+            {todaysQuests.slice(0, 4).map((q) => (
+              <li key={q.id} className="flex items-start gap-2 text-sm">
+                <span className={`w-5 h-5 rounded-full border flex items-center justify-center text-xs shrink-0 ${
+                  q.completedAt ? "bg-high border-high text-bg" : "border-border"
+                }`}>
+                  {q.completedAt && "✓"}
+                </span>
+                <span className={q.completedAt ? "line-through text-dim" : ""}>{q.title}</span>
+              </li>
+            ))}
+            {todaysQuests.length > 4 && (
+              <li className="text-xs text-dim pl-7">+ {todaysQuests.length - 4} more</li>
+            )}
+          </ul>
+        )}
+      </div>
+
+      {/* Radar */}
+      {radarData.some((r) => r.mastery > 0) && (
+        <div className="card mb-4">
+          <h3 className="font-semibold mb-2">Domain Mastery</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <RadarChart data={radarData} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
+              <PolarGrid stroke="#243046" />
+              <PolarAngleAxis dataKey="domain" stroke="#8b97ab" fontSize={11} />
+              <PolarRadiusAxis domain={[0, 100]} tick={false} stroke="#243046" />
+              <Radar dataKey="mastery" fill="#6ee7b7" fillOpacity={0.3} stroke="#6ee7b7" strokeWidth={2} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Next boss */}
+      {nextBoss && (
+        <div className="card mb-4 border-danger/40 bg-danger/5">
+          <p className="text-xs uppercase text-danger font-semibold tracking-wider">Next Boss</p>
+          <p className="font-semibold mt-1">{WEEK_META[nextBoss - 1].title}</p>
+          <p className="text-xs text-dim mt-1">Week {nextBoss} · {WEEK_META[nextBoss - 1].target || "Full-length exam"}</p>
+        </div>
+      )}
+
+      {/* Mindset of the day */}
+      <div className="card border-accent/30">
+        <p className="text-xs uppercase tracking-wider text-accent font-semibold">CISO Mindset · {format(today, "MMM d")}</p>
+        <p className="text-sm mt-2 italic">{MINDSET_PROMPTS[promptIdx]}</p>
       </div>
     </div>
   );

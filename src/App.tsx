@@ -1,34 +1,99 @@
-import { useEffect } from "react";
+import { useEffect, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { initializeDb } from "./db/seed";
 import { useProfile } from "./state/profile";
-import DashboardPage from "./features/dashboard/DashboardPage";
+import Layout from "./components/layout/Layout";
+import ErrorBoundary from "./components/ErrorBoundary";
+import PomodoroFab from "./components/PomodoroFab";
+
+const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage"));
+const CampaignPage = lazy(() => import("./features/plan/CampaignPage"));
+const WeekDetailPage = lazy(() => import("./features/plan/WeekDetailPage"));
+const FlashcardsPage = lazy(() => import("./features/flashcards/FlashcardsPage"));
+const ReviewSession = lazy(() => import("./features/flashcards/ReviewSession"));
+const CardEditor = lazy(() => import("./features/flashcards/CardEditor"));
+const QuizLauncherPage = lazy(() => import("./features/quiz/QuizLauncherPage"));
+const QuizSessionPage = lazy(() => import("./features/quiz/QuizSessionPage"));
+const QuizReviewPage = lazy(() => import("./features/quiz/QuizReviewPage"));
+const DomainsPage = lazy(() => import("./features/domains/DomainsPage"));
+const DomainDetailPage = lazy(() => import("./features/domains/DomainDetailPage"));
+const VaultPage = lazy(() => import("./features/vault/VaultPage"));
+const StatsPage = lazy(() => import("./features/stats/StatsPage"));
+const ResourcesPage = lazy(() => import("./features/resources/ResourcesPage"));
+const SettingsPage = lazy(() => import("./features/settings/SettingsPage"));
+
+function LoadingScreen() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="text-4xl mb-2 animate-flicker">◆</div>
+        <p className="text-dim text-sm">Loading…</p>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const { initProfile, loading } = useProfile();
 
   useEffect(() => {
     initializeDb().then(() => initProfile());
-  }, []);
+  }, []); // eslint-disable-line
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-bg text-ink">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-4">CISSPP</h1>
-          <p className="text-dim">Loading your quest...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingScreen />;
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="*" element={<div className="p-8 text-center text-dim">404 — Page not found</div>} />
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          {/* Immersive routes — no layout chrome */}
+          <Route
+            path="/flashcards/review"
+            element={
+              <Suspense fallback={<LoadingScreen />}>
+                <ReviewSession />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/quiz/session"
+            element={
+              <Suspense fallback={<LoadingScreen />}>
+                <QuizSessionPage />
+              </Suspense>
+            }
+          />
+
+          {/* Everything else gets the layout */}
+          <Route
+            path="*"
+            element={
+              <Layout>
+                <Suspense fallback={<LoadingScreen />}>
+                  <Routes>
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/plan" element={<CampaignPage />} />
+                    <Route path="/plan/week/:n" element={<WeekDetailPage />} />
+                    <Route path="/flashcards" element={<FlashcardsPage />} />
+                    <Route path="/flashcards/new" element={<CardEditor />} />
+                    <Route path="/quiz" element={<QuizLauncherPage />} />
+                    <Route path="/quiz/review/:id" element={<QuizReviewPage />} />
+                    <Route path="/domains" element={<DomainsPage />} />
+                    <Route path="/domains/:id" element={<DomainDetailPage />} />
+                    <Route path="/vault" element={<VaultPage />} />
+                    <Route path="/stats" element={<StatsPage />} />
+                    <Route path="/resources" element={<ResourcesPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="*" element={<div className="page text-center text-dim">404 · Page not found</div>} />
+                  </Routes>
+                </Suspense>
+                <PomodoroFab />
+              </Layout>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
