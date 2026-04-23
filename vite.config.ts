@@ -2,8 +2,10 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
-// https://vite.dev/config/
+// Use relative base so the app works whether deployed at "/" or "/CISSPP/" or any sub-path.
+// Combined with HashRouter, this makes the build portable (GitHub Pages, Netlify, any host).
 export default defineConfig({
+  base: "./",
   plugins: [
     react(),
     VitePWA({
@@ -17,7 +19,10 @@ export default defineConfig({
       ],
       manifest: false, // we ship our own at public/manifest.webmanifest
       workbox: {
-        navigateFallback: "/index.html",
+        // HashRouter keeps all app routes under a single index.html, so
+        // a navigation fallback isn't strictly required, but set it anyway
+        // so deep-link reloads still hit the shell.
+        navigateFallback: "index.html",
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         runtimeCaching: [
           {

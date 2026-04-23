@@ -1,5 +1,5 @@
 import { useEffect, Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import { initializeDb } from "./db/seed";
 import { useProfile } from "./state/profile";
 import Layout from "./components/layout/Layout";
@@ -44,7 +44,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           {/* Immersive routes — no layout chrome */}
           <Route
@@ -92,7 +92,7 @@ function App() {
             }
           />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </ErrorBoundary>
   );
 }
