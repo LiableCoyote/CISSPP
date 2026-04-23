@@ -2,7 +2,9 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - claude/cissp-gamified-study-site-jSrj1
   workflow_dispatch:
 
 permissions:
