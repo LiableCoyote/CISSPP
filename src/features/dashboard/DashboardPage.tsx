@@ -8,6 +8,7 @@ import { xpToLevel, LEVEL_XP_THRESHOLDS } from "../../lib/xp";
 import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 import InstallPrompt from "../../components/InstallPrompt";
+import { ACHIEVEMENT_DEFS } from "../../data/achievements";
 
 const MINDSET_PROMPTS = [
   "Would a CISO patch the server, or update the policy first?",
@@ -27,6 +28,10 @@ export default function DashboardPage() {
   const attempts = useLiveQuery(() => db.attempts.toArray()) || [];
   const quests = useLiveQuery(() => db.quests.toArray()) || [];
   const answers = useLiveQuery(() => db.answers.toArray()) || [];
+  const unlocks = useLiveQuery(() =>
+    db.achievements.orderBy("unlockedAt").reverse().limit(3).toArray(),
+  ) || [];
+  const unlockCount = useLiveQuery(() => db.achievements.count()) ?? 0;
 
   if (!profile) return null;
 
@@ -138,6 +143,40 @@ export default function DashboardPage() {
           <p className="text-2xl font-bold text-accent">{cisoScore}%</p>
         </div>
       </div>
+
+      {/* Recent achievements */}
+      {unlockCount > 0 && (
+        <section aria-labelledby="recent-unlocks-heading" className="card mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 id="recent-unlocks-heading" className="font-semibold">
+              <span aria-hidden="true">🏆 </span>Achievements
+            </h3>
+            <span className="text-xs text-dim">
+              {unlockCount} / {ACHIEVEMENT_DEFS.length}
+            </span>
+          </div>
+          <ul className="space-y-2" role="list">
+            {unlocks.map((u) => {
+              const def = ACHIEVEMENT_DEFS.find((d) => d.id === u.id);
+              if (!def) return null;
+              return (
+                <li key={u.id} className="flex items-center gap-3">
+                  <span className="text-xl shrink-0" aria-hidden="true">
+                    {def.icon}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{def.name}</p>
+                    <p className="text-xs text-dim truncate">{def.description}</p>
+                  </div>
+                  <span className="text-[10px] text-dim whitespace-nowrap">
+                    {format(parseISO(u.unlockedAt), "MMM d")}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {/* Domain hoarder warning */}
       {hoarderAlert && (

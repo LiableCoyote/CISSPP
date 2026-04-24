@@ -3,11 +3,13 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type QuizAnswer } from "../../db/schema";
 import { ALL_QUESTIONS } from "../../data/questions.seed";
 import { useProfile } from "../../state/profile";
+import { checkAchievements } from "../achievements/engine";
+import { format } from "date-fns";
 
 export default function QuizReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, refreshProfile } = useProfile();
 
   const attempt = useLiveQuery(() => db.attempts.get(id!), [id]);
   const answers = useLiveQuery(
@@ -49,6 +51,40 @@ export default function QuizReviewPage() {
     // XP based on accuracy
     const xpGain = Math.round(attempt.scorePct * 2) + (attempt.mode === "full" ? 200 : attempt.mode === "mixed" ? 50 : 25);
     await updateProfile({ xp: profile.xp + xpGain });
+
+    // Log study minutes for the quiz so it counts toward streak + heatmap.
+    const quizMinutes = Math.max(1, Math.round(attempt.totalSeconds / 60));
+    const today = format(new Date(), "yyyy-MM-dd");
+    const existing = await db.studyLog.get(today);
+    if (existing) {
+      await db.studyLog.update(today, {
+        minutes: existing.minutes + quizMinutes,
+        sessions: existing.sessions + 1,
+      });
+    } else {
+      await db.studyLog.add({
+        date: today,
+        minutes: quizMinutes,
+        sessions: 1,
+        questsCompleted: 0,
+        flashcardsReviewed: 0,
+      });
+    }
+
+    // Keep the streak alive on a no-quest quiz day.
+    const lastActive = profile.lastActiveDate;
+    if (lastActive !== today) {
+      const yesterday = format(new Date(Date.now() - 86400000), "yyyy-MM-dd");
+      const newStreak = lastActive === yesterday ? profile.streak + 1 : 1;
+      await updateProfile({
+        lastActiveDate: today,
+        streak: newStreak,
+        longestStreak: Math.max(profile.longestStreak, newStreak),
+      });
+    }
+
+    await checkAchievements({ kind: "quiz-complete", attemptId: attempt.id });
+    await refreshProfile();
     navigate("/");
   };
 

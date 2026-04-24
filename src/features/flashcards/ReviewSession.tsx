@@ -6,12 +6,13 @@ import { db, type Flashcard } from "../../db/schema";
 import { sm2, nextReviewDate } from "./srs";
 import { useProfile } from "../../state/profile";
 import { format } from "date-fns";
+import { checkAchievements } from "../achievements/engine";
 
 type Quality = 0 | 1 | 3 | 4;
 
 export default function ReviewSession() {
   const navigate = useNavigate();
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, refreshProfile } = useProfile();
   const now = new Date();
   const dueCards = useLiveQuery(() =>
     db.flashcards.where("dueAt").below(now.toISOString()).toArray()
@@ -104,6 +105,12 @@ export default function ReviewSession() {
       });
     }
     if ("vibrate" in navigator) navigator.vibrate(5);
+
+    const reviewedToday = (existing?.flashcardsReviewed || 0) + 1;
+    const totalDeck = await db.flashcards.count();
+    await checkAchievements({ kind: "flashcard-review", reviewedToday, totalDeck });
+    await refreshProfile();
+
     setRevealed(false);
     setReviewedCount((n) => n + 1);
     setIdx((n) => n + 1);

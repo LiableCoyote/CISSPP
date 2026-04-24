@@ -4,13 +4,15 @@ import { db, type Quest } from "../../db/schema";
 import { WEEK_META } from "../../data/weeks";
 import { useProfile } from "../../state/profile";
 import { format } from "date-fns";
+import { checkAchievements } from "../achievements/engine";
+import { pushToast } from "../../state/toast";
 
 export default function WeekDetailPage() {
   const { n } = useParams();
   const week = parseInt(n || "1", 10);
   const meta = WEEK_META.find((w) => w.week === week);
   const quests = useLiveQuery(() => db.quests.where("week").equals(week).toArray(), [week]);
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, refreshProfile } = useProfile();
 
   if (!meta || !profile) return null;
 
@@ -58,6 +60,18 @@ export default function WeekDetailPage() {
     }
     // Haptic on mobile
     if ("vibrate" in navigator) navigator.vibrate(10);
+
+    pushToast({
+      variant: "success",
+      icon: "✅",
+      title: "Quest complete",
+      body: q.title,
+      xp: q.xp,
+      durationMs: 2800,
+    });
+
+    await checkAchievements({ kind: "quest-complete", questId: q.id, week: q.week, day: q.day });
+    await refreshProfile();
   };
 
   const undoQuest = async (q: Quest) => {

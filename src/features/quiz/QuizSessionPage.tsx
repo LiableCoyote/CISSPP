@@ -112,6 +112,17 @@ export default function QuizSessionPage() {
     setAnswers((a) => [...a, answer]);
     await db.answers.add(answer);
 
+    // Update CISO-thinking counters on the profile row. Read-modify-write on the
+    // DB directly so rapid-fire submits don't race against stale closures.
+    const fresh = await db.profile.get(1);
+    if (fresh) {
+      const patch: Partial<typeof fresh> = {};
+      if (q.isMindsetHeavy && correct) patch.mindsetChoicesCorrect = fresh.mindsetChoicesCorrect + 1;
+      if (tech) patch.technicianMisses = fresh.technicianMisses + 1;
+      if (speed && !correct) patch.speedReaderMisses = fresh.speedReaderMisses + 1;
+      if (Object.keys(patch).length > 0) await db.profile.update(1, patch);
+    }
+
     // Nudge on wrong answers only
     if (!correct) {
       if (tech) setNudge(getTechnicianNudge());
