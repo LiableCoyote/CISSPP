@@ -1,6 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { Link, useNavigate } from "react-router-dom";
 import { db } from "../../db/schema";
+import EmptyState from "../../components/ui/EmptyState";
 
 export default function FlashcardsPage() {
   const cards = useLiveQuery(() => db.flashcards.toArray()) || [];
@@ -40,14 +41,12 @@ export default function FlashcardsPage() {
           Review {dueCards.length} Due Cards →
         </button>
       ) : (
-        <div className="card text-center py-8">
-          <p className="text-4xl mb-2">🎉</p>
-          <p className="font-semibold">No cards due!</p>
-          <p className="text-sm text-dim mt-1">Great work. Come back later or add new cards.</p>
-          <Link to="/flashcards/new" className="btn-outline mt-4 inline-flex">
-            Add a Card
-          </Link>
-        </div>
+        <EmptyState
+          icon="🎉"
+          title="No cards due right now"
+          body="Come back after your next study session, or add a card from a concept you just learned."
+          action={{ kind: "link", to: "/flashcards/new", label: "Add a Card" }}
+        />
       )}
 
       <h2 className="mt-8 mb-3 text-lg font-semibold">All cards ({cards.length})</h2>

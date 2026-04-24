@@ -6,6 +6,7 @@ import { useProfile } from "../../state/profile";
 import { format } from "date-fns";
 import { checkAchievements } from "../achievements/engine";
 import { pushToast } from "../../state/toast";
+import EmptyState from "../../components/ui/EmptyState";
 
 export default function WeekDetailPage() {
   const { n } = useParams();
@@ -84,10 +85,19 @@ export default function WeekDetailPage() {
 
   return (
     <div className="page">
-      <div className="flex items-center gap-2 text-sm text-dim mb-2">
-        <Link to="/plan" className="link">← 8-Week Plan</Link>
-        <span>/</span>
-        <span>Week {week}</span>
+      <div className="flex items-center justify-between mb-2 no-print">
+        <div className="flex items-center gap-2 text-sm text-dim">
+          <Link to="/plan" className="link">← 8-Week Plan</Link>
+          <span>/</span>
+          <span>Week {week}</span>
+        </div>
+        <button
+          onClick={() => window.print()}
+          className="btn-ghost text-xs"
+          aria-label={`Print Week ${week} summary`}
+        >
+          <span aria-hidden="true">🖨️ </span>Print
+        </button>
       </div>
       <h1 className="text-2xl font-bold">{meta.title}</h1>
       <p className="text-dim mt-1 mb-4">{meta.focus}</p>
@@ -95,6 +105,15 @@ export default function WeekDetailPage() {
         <div className="card mb-4 border-warn/40 bg-warn/5">
           <p className="text-sm">🎯 <span className="font-semibold">Target:</span> {meta.target}</p>
         </div>
+      )}
+
+      {(quests || []).length === 0 && (
+        <EmptyState
+          icon="📅"
+          title="No quests for this week yet"
+          body="The quest library is seeded on first launch. Reset from Settings if this looks empty by mistake."
+          action={{ kind: "link", to: "/plan", label: "Back to Campaign" }}
+        />
       )}
 
       <div className="space-y-4">

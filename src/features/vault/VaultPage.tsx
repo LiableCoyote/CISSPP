@@ -7,18 +7,27 @@ export default function VaultPage() {
 
   return (
     <div className={reading ? "min-h-screen bg-bg p-4 max-w-3xl mx-auto safe-top safe-bottom" : "page"}>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-2 no-print">
         <div>
           <h1 className="text-2xl font-bold">Memorization Vault</h1>
           <p className="text-sm text-dim mt-1">If you can't reproduce these cold, you're not ready.</p>
         </div>
-        <button
-          onClick={() => setReading((r) => !r)}
-          className="btn-ghost text-xs"
-          aria-label="Toggle reading mode"
-        >
-          {reading ? "Exit Reading" : "📖 Reading"}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => window.print()}
+            className="btn-ghost text-xs"
+            aria-label="Print vault as a cheat sheet"
+          >
+            <span aria-hidden="true">🖨️ </span>Print
+          </button>
+          <button
+            onClick={() => setReading((r) => !r)}
+            className="btn-ghost text-xs"
+            aria-label="Toggle reading mode"
+          >
+            {reading ? "Exit Reading" : "📖 Reading"}
+          </button>
+        </div>
       </div>
 
       {!reading && (

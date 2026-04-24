@@ -2,6 +2,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Link } from "react-router-dom";
 import { db } from "../../db/schema";
 import { DOMAINS } from "../../data/domains";
+import EmptyState from "../../components/ui/EmptyState";
 import {
   LineChart,
   Line,
@@ -105,10 +106,22 @@ export default function StatsPage() {
   const mindsetMisses = answers.filter((a) => a.flaggedMindset).length;
   const cisoScore = totalAnswered > 0 ? Math.round(((totalAnswered - mindsetMisses) / totalAnswered) * 100) : 100;
 
+  const hasAnyData = attempts.length > 0 || studyLog.length > 0;
+
   return (
     <div className="page">
       <h1 className="text-2xl font-bold mb-6">Your Stats</h1>
 
+      {!hasAnyData && (
+        <EmptyState
+          icon="📊"
+          title="No study data yet"
+          body="Complete a quest or take a quiz and your heatmap, score trend, and mastery chart will populate automatically."
+          action={{ kind: "link", to: "/plan", label: "Open Campaign" }}
+        />
+      )}
+
+      {hasAnyData && (<>
       {/* Heatmap */}
       <div className="card mb-6">
         <h3 className="font-semibold mb-3">90-Day Study Heatmap</h3>
@@ -265,6 +278,7 @@ export default function StatsPage() {
           ))}
         </div>
       </div>
+      </>)}
     </div>
   );
 }

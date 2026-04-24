@@ -3,6 +3,7 @@ import { db } from "../../db/schema";
 import { RESOURCES } from "../../data/resources";
 import { useProfile } from "../../state/profile";
 import { differenceInCalendarDays, parseISO } from "date-fns";
+import EmptyState from "../../components/ui/EmptyState";
 
 export default function ResourcesPage() {
   const states = useLiveQuery(() => db.resources.toArray()) || [];
@@ -35,6 +36,24 @@ export default function ResourcesPage() {
       <p className="text-dim text-sm mb-4">
         The plan's free resource stack. Tap to mark as watched/read.
       </p>
+
+      {(() => {
+        const allWatched = RESOURCES.length > 0 &&
+          RESOURCES.every((r) => states.find((s) => s.id === r.id)?.watched);
+        if (allWatched) {
+          return (
+            <div className="mb-6">
+              <EmptyState
+                icon="✅"
+                title="Resource stack cleared"
+                body="Every curated resource is marked complete. Focus on flashcards and review from here."
+                action={{ kind: "link", to: "/flashcards", label: "Open Flashcards" }}
+              />
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       {crammerMode && (
         <div className="card mb-4 border-warn/40 bg-warn/5">

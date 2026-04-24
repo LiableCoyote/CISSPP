@@ -9,6 +9,7 @@ import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 import InstallPrompt from "../../components/InstallPrompt";
 import { ACHIEVEMENT_DEFS } from "../../data/achievements";
+import ShareCard from "../stats/ShareCard";
 
 const MINDSET_PROMPTS = [
   "Would a CISO patch the server, or update the policy first?",
@@ -269,10 +270,12 @@ export default function DashboardPage() {
       )}
 
       {/* Mindset of the day */}
-      <div className="card border-accent/30">
+      <div className="card border-accent/30 mb-4">
         <p className="text-xs uppercase tracking-wider text-accent font-semibold">CISO Mindset · {format(today, "MMM d")}</p>
         <p className="text-sm mt-2 italic">{MINDSET_PROMPTS[promptIdx]}</p>
       </div>
+
+      <ShareCard />
     </div>
   );
 }

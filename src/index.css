@@ -180,3 +180,57 @@
     border: 1px solid CanvasText;
   }
 }
+
+/* Print layout — used for the Vault cheat sheet and week summaries */
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+  body {
+    background: white !important;
+    background-image: none !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Hide app chrome — nav, FABs, install prompt, toasts, modals */
+  nav,
+  aside,
+  .no-print,
+  [role="banner"],
+  [role="dialog"],
+  [aria-label="Notifications"] {
+    display: none !important;
+  }
+  .card {
+    border: 1px solid #d4d4d4 !important;
+    background: white !important;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+  .page {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  h1,
+  h2,
+  h3,
+  p,
+  li,
+  td,
+  th {
+    color: black !important;
+  }
+  a {
+    color: black !important;
+    text-decoration: none !important;
+  }
+  /* Expand scrollable tables fully on paper */
+  .overflow-x-auto,
+  .no-scrollbar {
+    overflow: visible !important;
+  }
+  table {
+    width: 100% !important;
+  }
+}
