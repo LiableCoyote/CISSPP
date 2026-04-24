@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type DomainId } from "../../db/schema";
+import { db, type DomainId, type AppNote } from "../../db/schema";
 import { DOMAINS } from "../../data/domains";
 import { questionsByDomain } from "../../data/questions.seed";
 
@@ -10,10 +11,58 @@ export default function DomainDetailPage() {
   const domain = DOMAINS.find((d) => d.id === domainId);
   const cards = useLiveQuery(() => db.flashcards.where("domainId").equals(domainId).toArray(), [domainId]);
   const attempts = useLiveQuery(() => db.attempts.where("domainId").equals(domainId).reverse().sortBy("startedAt"), [domainId]);
+  const notes = useLiveQuery(() => db.notes.where("domainId").equals(domainId).toArray(), [domainId]);
+
+  const [composing, setComposing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
 
   if (!domain) return <div className="page">Domain not found.</div>;
 
   const questionCount = questionsByDomain(domainId).length;
+
+  const startNew = () => {
+    setEditingId(null);
+    setTitle("");
+    setBody("");
+    setComposing(true);
+  };
+
+  const startEdit = (note: AppNote) => {
+    setEditingId(note.id);
+    setTitle(note.title);
+    setBody(note.body);
+    setComposing(true);
+  };
+
+  const cancel = () => {
+    setComposing(false);
+    setEditingId(null);
+    setTitle("");
+    setBody("");
+  };
+
+  const save = async () => {
+    if (!title.trim() && !body.trim()) return;
+    const now = new Date().toISOString();
+    if (editingId) {
+      await db.notes.update(editingId, { title: title.trim(), body: body.trim(), updatedAt: now });
+    } else {
+      await db.notes.add({
+        id: `note-${Date.now()}`,
+        domainId,
+        title: title.trim() || "Untitled",
+        body: body.trim(),
+        updatedAt: now,
+      });
+    }
+    cancel();
+  };
+
+  const remove = async (id: string) => {
+    await db.notes.delete(id);
+  };
 
   return (
     <div className="page">
@@ -59,6 +108,93 @@ export default function DomainDetailPage() {
       <Link to={`/quiz/session?mode=domain&domain=${domainId}`} className="btn-primary w-full mb-6">
         Start Domain Drill (25 Q) →
       </Link>
+
+      <section aria-labelledby="notes-heading" className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 id="notes-heading" className="text-lg font-semibold">Notes</h2>
+          {!composing && (
+            <button onClick={startNew} className="btn-outline text-sm px-3 py-1">
+              + Add note
+            </button>
+          )}
+        </div>
+
+        {composing && (
+          <div className="card mb-3">
+            <label htmlFor="note-title" className="block text-xs text-dim mb-1">Title</label>
+            <input
+              id="note-title"
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="input mb-2"
+              placeholder="e.g. Bell-LaPadula vs Biba"
+              maxLength={120}
+            />
+            <label htmlFor="note-body" className="block text-xs text-dim mb-1">Body (markdown supported visually — renders as plain text)</label>
+            <textarea
+              id="note-body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              className="input min-h-[120px]"
+              placeholder="Key insight, mnemonic, or gotcha…"
+              rows={5}
+            />
+            <div className="flex gap-2 mt-3">
+              <button onClick={save} className="btn-primary flex-1" disabled={!title.trim() && !body.trim()}>
+                {editingId ? "Save" : "Create note"}
+              </button>
+              <button onClick={cancel} className="btn-ghost">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {notes && notes.length > 0 ? (
+          <div className="space-y-2">
+            {notes
+              .slice()
+              .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+              .map((n) => (
+                <article key={n.id} className="card">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h3 className="font-semibold">{n.title}</h3>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => startEdit(n)}
+                        className="text-xs text-dim hover:text-ink px-2 py-1"
+                        aria-label={`Edit ${n.title}`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => remove(n.id)}
+                        className="text-xs text-danger hover:underline px-2 py-1"
+                        aria-label={`Delete ${n.title}`}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  {n.body && (
+                    <p className="text-sm text-dim whitespace-pre-wrap">{n.body}</p>
+                  )}
+                  <p className="text-[10px] text-dim mt-2">
+                    Updated {new Date(n.updatedAt).toLocaleDateString()}
+                  </p>
+                </article>
+              ))}
+          </div>
+        ) : (
+          !composing && (
+            <p className="text-sm text-dim">
+              No notes yet. Add insights, mnemonics, or things that confused you — reviewing notes
+              right before the exam is one of the highest-leverage moves.
+            </p>
+          )
+        )}
+      </section>
 
       <h2 className="text-lg font-semibold mb-3">Recent Attempts</h2>
       {attempts && attempts.length > 0 ? (

@@ -3,6 +3,7 @@ import BottomNav from "./BottomNav";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import Onboarding from "./Onboarding";
+import Search from "../Search";
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         Skip to main content
       </a>
       <Onboarding />
+      <Search />
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header />

@@ -41,6 +41,15 @@ export default function Header() {
           aria-live="polite"
           aria-atomic="false"
         >
+          <button
+            onClick={() => (window as Window & { __cisspp_openSearch?: () => void }).__cisspp_openSearch?.()}
+            className="pill bg-panel2 text-dim hover:text-ink flex items-center gap-1"
+            aria-label="Open search (Ctrl+K)"
+            aria-keyshortcuts="Control+K"
+          >
+            <span aria-hidden="true">🔎</span>
+            <kbd className="text-[10px] hidden md:inline">⌘K</kbd>
+          </button>
           {!online && (
             <span className="pill bg-warn/20 text-warn" role="alert">
               <span className="sr-only">Status: </span>Offline

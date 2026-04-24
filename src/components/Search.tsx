@@ -1,0 +1,265 @@
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "../db/schema";
+import { ALL_QUESTIONS } from "../data/questions.seed";
+import { RESOURCES } from "../data/resources";
+import { VAULT_TABLES } from "../data/vault";
+import { DOMAINS } from "../data/domains";
+
+type Hit = {
+  id: string;
+  label: string;
+  context: string;
+  category: "Quest" | "Flashcard" | "Question" | "Vault" | "Resource" | "Domain";
+  route: string;
+};
+
+const MAX_PER_CATEGORY = 5;
+
+function matches(text: string, q: string): boolean {
+  return text.toLowerCase().includes(q);
+}
+
+export default function Search() {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [activeIdx, setActiveIdx] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+
+  const quests = useLiveQuery(() => db.quests.toArray(), []);
+  const flashcards = useLiveQuery(() => db.flashcards.toArray(), []);
+  const notes = useLiveQuery(() => db.notes.toArray(), []);
+
+  // Cmd/Ctrl+K to open
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setOpen((v) => !v);
+      }
+      if (e.key === "Escape" && open) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  // Focus input when opened
+  useEffect(() => {
+    if (open) {
+      setQuery("");
+      setActiveIdx(0);
+      setTimeout(() => inputRef.current?.focus(), 30);
+    }
+  }, [open]);
+
+  // Expose a global open handler for the header icon
+  useEffect(() => {
+    (window as Window & { __cisspp_openSearch?: () => void }).__cisspp_openSearch = () => setOpen(true);
+    return () => {
+      delete (window as Window & { __cisspp_openSearch?: () => void }).__cisspp_openSearch;
+    };
+  }, []);
+
+  const hits = useMemo<Hit[]>(() => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const out: Hit[] = [];
+
+    DOMAINS.filter((d) => matches(d.name, q)).slice(0, MAX_PER_CATEGORY).forEach((d) =>
+      out.push({
+        id: `dom-${d.id}`,
+        label: `D${d.id}: ${d.name}`,
+        context: `${d.weight}% of exam · ${d.priority}`,
+        category: "Domain",
+        route: `/domains/${d.id}`,
+      })
+    );
+
+    (quests || [])
+      .filter((quest) => matches(quest.title, q) || matches(quest.description, q))
+      .slice(0, MAX_PER_CATEGORY)
+      .forEach((quest) =>
+        out.push({
+          id: `q-${quest.id}`,
+          label: quest.title,
+          context: `Week ${quest.week} · Day ${quest.day}`,
+          category: "Quest",
+          route: `/plan/week/${quest.week}`,
+        })
+      );
+
+    (flashcards || [])
+      .filter((c) => matches(c.front, q) || matches(c.back, q))
+      .slice(0, MAX_PER_CATEGORY)
+      .forEach((c) =>
+        out.push({
+          id: `fc-${c.id}`,
+          label: c.front,
+          context: c.back.slice(0, 80),
+          category: "Flashcard",
+          route: `/flashcards`,
+        })
+      );
+
+    ALL_QUESTIONS.filter((qq) => matches(qq.prompt, q))
+      .slice(0, MAX_PER_CATEGORY)
+      .forEach((qq) =>
+        out.push({
+          id: `qq-${qq.id}`,
+          label: qq.prompt.slice(0, 90) + (qq.prompt.length > 90 ? "…" : ""),
+          context: `Domain ${qq.domainId}`,
+          category: "Question",
+          route: `/domains/${qq.domainId}`,
+        })
+      );
+
+    VAULT_TABLES.filter(
+      (t) =>
+        matches(t.title, q) ||
+        matches(t.intro, q) ||
+        t.rows.some((r) => r.some((cell) => matches(cell, q)))
+    )
+      .slice(0, MAX_PER_CATEGORY)
+      .forEach((t) =>
+        out.push({
+          id: `v-${t.id}`,
+          label: t.title,
+          context: t.intro.slice(0, 80),
+          category: "Vault",
+          route: `/vault`,
+        })
+      );
+
+    RESOURCES.filter((r) => matches(r.title, q) || matches(r.description, q))
+      .slice(0, MAX_PER_CATEGORY)
+      .forEach((r) =>
+        out.push({
+          id: `r-${r.id}`,
+          label: r.title,
+          context: r.description.slice(0, 80),
+          category: "Resource",
+          route: `/resources`,
+        })
+      );
+
+    (notes || [])
+      .filter((n) => matches(n.title, q) || matches(n.body, q))
+      .slice(0, MAX_PER_CATEGORY)
+      .forEach((n) =>
+        out.push({
+          id: `n-${n.id}`,
+          label: n.title,
+          context: n.body.slice(0, 80),
+          category: "Domain",
+          route: n.domainId ? `/domains/${n.domainId}` : "/domains",
+        })
+      );
+
+    return out;
+  }, [query, quests, flashcards, notes]);
+
+  // Clamp active index
+  useEffect(() => {
+    if (activeIdx >= hits.length) setActiveIdx(0);
+  }, [hits.length, activeIdx]);
+
+  const go = (hit: Hit) => {
+    setOpen(false);
+    navigate(hit.route);
+  };
+
+  const onInputKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIdx((i) => Math.min(i + 1, hits.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const hit = hits[activeIdx];
+      if (hit) go(hit);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-40 bg-bg/80 backdrop-blur-sm flex items-start justify-center p-4 pt-[10vh]"
+      onClick={() => setOpen(false)}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="search-label"
+    >
+      <div
+        className="card max-w-xl w-full p-0 overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+          <span aria-hidden="true" className="text-dim">🔎</span>
+          <label id="search-label" className="sr-only">
+            Search across quests, flashcards, questions, vault, resources, and notes
+          </label>
+          <input
+            ref={inputRef}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onInputKey}
+            placeholder="Search quests, cards, questions, vault…"
+            className="flex-1 bg-transparent outline-none text-base"
+            aria-controls="search-results"
+            aria-activedescendant={hits[activeIdx] ? `hit-${hits[activeIdx].id}` : undefined}
+          />
+          <kbd className="text-xs text-dim border border-border rounded px-1.5 py-0.5 hidden sm:inline">
+            Esc
+          </kbd>
+        </div>
+
+        <div
+          id="search-results"
+          role="listbox"
+          className="max-h-[60vh] overflow-y-auto"
+          aria-label="Search results"
+        >
+          {query.trim().length < 2 && (
+            <div className="p-6 text-center text-sm text-dim">
+              Type at least 2 characters. Navigate with ↑ / ↓, open with Enter.
+            </div>
+          )}
+          {query.trim().length >= 2 && hits.length === 0 && (
+            <div className="p-6 text-center text-sm text-dim">No matches.</div>
+          )}
+          {hits.map((h, i) => (
+            <button
+              key={h.id}
+              id={`hit-${h.id}`}
+              role="option"
+              aria-selected={i === activeIdx}
+              onClick={() => go(h)}
+              onMouseEnter={() => setActiveIdx(i)}
+              className={`w-full text-left px-4 py-3 flex items-start gap-3 border-b border-border last:border-0 ${
+                i === activeIdx ? "bg-accent/10" : "hover:bg-panel2"
+              }`}
+            >
+              <span className="pill bg-panel2 text-dim text-[10px] flex-shrink-0 mt-0.5">
+                {h.category}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{h.label}</p>
+                {h.context && (
+                  <p className="text-xs text-dim truncate mt-0.5">{h.context}</p>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

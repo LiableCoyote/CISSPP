@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useProfile } from "../../state/profile";
 import { db } from "../../db/schema";
 import { exportData, importData } from "../../lib/export";
+import { getWeekKey } from "../../lib/streak";
+import ProfileSwitcher from "../../components/ProfileSwitcher";
 
 export default function SettingsPage() {
   const { profile, updateProfile } = useProfile();
@@ -75,6 +77,23 @@ export default function SettingsPage() {
     }
   };
 
+  const thisWeekKey = getWeekKey(new Date());
+  const freezesUsed =
+    profile.streakWeekKey === thisWeekKey ? profile.streakFreezesUsedThisWeek : 0;
+  const freezeAvailable = freezesUsed < 1 && profile.streak > 0;
+
+  const applyFreeze = async () => {
+    if (!freezeAvailable) return;
+    const today = new Date().toISOString().split("T")[0];
+    await updateProfile({
+      streakFreezesUsedThisWeek: freezesUsed + 1,
+      streakWeekKey: thisWeekKey,
+      lastActiveDate: today,
+    });
+    setImportStatus("✓ Streak freeze applied for today.");
+    setTimeout(() => setImportStatus(null), 3000);
+  };
+
   const doReset = async () => {
     if (!resetConfirm) {
       setResetConfirm(true);
@@ -95,6 +114,41 @@ export default function SettingsPage() {
   return (
     <div className="page max-w-2xl">
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
+
+      <ProfileSwitcher />
+
+      <section aria-labelledby="streak-heading" className="card mb-4">
+        <h2 id="streak-heading" className="font-semibold mb-1">Streak Freeze</h2>
+        <p className="text-sm text-dim mb-3">
+          One streak freeze per week skips a missed day without breaking your run. The plan is
+          realistic — life happens.
+        </p>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <p className="text-sm">
+              This week: <span className="font-semibold">{freezesUsed}/1</span> freeze used
+            </p>
+            <p className="text-xs text-dim">
+              Current streak: {profile.streak} day{profile.streak === 1 ? "" : "s"}
+              {profile.longestStreak > 0 ? ` · Longest: ${profile.longestStreak}` : ""}
+            </p>
+          </div>
+          <span
+            className={`pill ${freezeAvailable ? "bg-accent/15 text-accent" : "bg-panel2 text-dim"}`}
+            aria-label={freezeAvailable ? "Freeze available" : "Freeze used this week"}
+          >
+            {freezeAvailable ? "❄ Available" : "Used"}
+          </span>
+        </div>
+        <button
+          onClick={applyFreeze}
+          className="btn-outline w-full"
+          disabled={!freezeAvailable}
+          aria-disabled={!freezeAvailable}
+        >
+          {freezeAvailable ? "Use Streak Freeze for Today" : "No freeze available this week"}
+        </button>
+      </section>
 
       <section aria-labelledby="profile-heading" className="card mb-4">
         <h2 id="profile-heading" className="font-semibold mb-3">Profile</h2>
