@@ -1,4 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import { Link } from "react-router-dom";
 import { db } from "../../db/schema";
 import { DOMAINS } from "../../data/domains";
 import {
@@ -14,13 +15,16 @@ import {
   Pie,
   Cell,
   Legend,
+  BarChart,
+  Bar,
 } from "recharts";
-import { format, subDays, parseISO } from "date-fns";
+import { format, subDays, parseISO, addDays, differenceInCalendarDays } from "date-fns";
 
 export default function StatsPage() {
   const attempts = useLiveQuery(() => db.attempts.orderBy("startedAt").toArray()) || [];
   const studyLog = useLiveQuery(() => db.studyLog.toArray()) || [];
   const answers = useLiveQuery(() => db.answers.toArray()) || [];
+  const flashcards = useLiveQuery(() => db.flashcards.toArray()) || [];
 
   // Study heatmap — last 90 days
   const today = new Date();
@@ -69,10 +73,32 @@ export default function StatsPage() {
     const avg = domainAttempts.length > 0
       ? domainAttempts.reduce((s, a) => s + a.scorePct, 0) / domainAttempts.length
       : 0;
-    return { id: d.id, name: d.name, mastery: Math.round(avg), weight: d.weight, accent: d.accent, priority: d.priority };
+    return {
+      id: d.id,
+      name: d.name,
+      mastery: Math.round(avg),
+      attempts: domainAttempts.length,
+      weight: d.weight,
+      accent: d.accent,
+      priority: d.priority,
+    };
   });
 
   const weakest = [...domainMastery].filter((d) => d.mastery > 0).sort((a, b) => a.mastery - b.mastery).slice(0, 2);
+  // Actionable banner: domains with ≥2 attempts sitting below 60%.
+  const remediation = domainMastery.filter((d) => d.attempts >= 2 && d.mastery < 60);
+
+  // 7-day flashcard due forecast
+  const srsForecast = Array.from({ length: 8 }, (_, i) => {
+    const day = addDays(today, i);
+    const label = i === 0 ? "Today" : format(day, "EEE");
+    const dueOn = flashcards.filter((c) => {
+      const diff = differenceInCalendarDays(parseISO(c.dueAt), today);
+      return diff === i;
+    }).length;
+    const overdue = i === 0 ? flashcards.filter((c) => parseISO(c.dueAt) < today).length : 0;
+    return { day: label, due: dueOn + overdue };
+  });
 
   // CISO thinking score
   const totalAnswered = answers.length;
@@ -121,8 +147,39 @@ export default function StatsPage() {
         </p>
       </div>
 
-      {/* Weakest domains */}
-      {weakest.length > 0 && (
+      {/* Weak-domain remediation banner */}
+      {remediation.length > 0 && (
+        <div className="card mb-6 border-danger/40 bg-danger/5" role="note">
+          <h3 className="font-semibold mb-2">
+            <span aria-hidden="true">🚨 </span>Remediation Needed
+          </h3>
+          <p className="text-xs text-dim mb-3">
+            Domains averaging below 60% after 2+ attempts. Drill these first.
+          </p>
+          <div className="space-y-2">
+            {remediation.map((d) => (
+              <Link
+                key={d.id}
+                to={`/quiz/session?mode=domain&domain=${d.id}`}
+                className="flex items-center justify-between p-2 rounded-lg bg-panel2 hover:bg-border transition-colors"
+              >
+                <div>
+                  <span className="text-sm font-medium">D{d.id} · {d.name}</span>
+                  <span className="text-xs text-dim ml-2">
+                    ({d.attempts} attempt{d.attempts === 1 ? "" : "s"})
+                  </span>
+                </div>
+                <span className="text-sm font-bold text-danger">
+                  {d.mastery}% <span aria-hidden="true">→</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Weakest domains (summary) */}
+      {weakest.length > 0 && remediation.length === 0 && (
         <div className="card mb-6 border-warn/40 bg-warn/5">
           <h3 className="font-semibold mb-3">Weakest Domains</h3>
           {weakest.map((d) => (
@@ -131,7 +188,26 @@ export default function StatsPage() {
               <span className="text-sm font-bold text-warn">{d.mastery}%</span>
             </div>
           ))}
-          <p className="text-xs text-dim mt-2">These need targeted drill sessions this week.</p>
+          <p className="text-xs text-dim mt-2">Rotate some drill time through these this week.</p>
+        </div>
+      )}
+
+      {/* 7-day flashcard due forecast */}
+      {flashcards.length > 0 && (
+        <div className="card mb-6">
+          <h3 className="font-semibold mb-3">Flashcards Due — Next 7 Days</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={srsForecast}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#243046" />
+              <XAxis dataKey="day" stroke="#8b97ab" fontSize={11} />
+              <YAxis stroke="#8b97ab" fontSize={11} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: "#111827", border: "1px solid #243046" }} />
+              <Bar dataKey="due" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+          <p className="text-xs text-dim mt-1">
+            Today's bar includes overdue cards. Chip away so you don't get buried.
+          </p>
         </div>
       )}
 

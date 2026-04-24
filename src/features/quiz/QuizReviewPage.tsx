@@ -20,6 +20,7 @@ export default function QuizReviewPage() {
   if (!attempt || !answers || !profile) return <div className="page text-dim">Loading…</div>;
 
   const missed = answers.filter((a) => !a.correct);
+  const confidentMisses = missed.filter((a) => a.confidence !== null && a.confidence >= 4);
 
   const setMissCategory = async (answerId: string, category: QuizAnswer["missCategory"]) => {
     await db.answers.update(answerId, { missCategory: category });
@@ -128,6 +129,19 @@ export default function QuizReviewPage() {
         </div>
       </div>
 
+      {confidentMisses.length > 0 && (
+        <div className="card mb-6 border-danger/40 bg-danger/5" role="note">
+          <p className="text-sm">
+            <span className="font-semibold text-danger">
+              <span aria-hidden="true">🎯 </span>Overconfidence detected:
+            </span>{" "}
+            {confidentMisses.length} miss{confidentMisses.length === 1 ? "" : "es"} on question
+            {confidentMisses.length === 1 ? "" : "s"} where you rated yourself confident (4-5).
+            These are the highest-signal review targets.
+          </p>
+        </div>
+      )}
+
       {/* Missed questions */}
       {missed.length > 0 && (
         <>
@@ -136,10 +150,16 @@ export default function QuizReviewPage() {
             {missed.map((a) => {
               const q = ALL_QUESTIONS.find((x) => x.id === a.questionId);
               if (!q) return null;
+              const overconfident = a.confidence !== null && a.confidence >= 4;
               return (
-                <div key={a.id} className="card">
-                  <div className="flex items-start gap-2 mb-2">
+                <div key={a.id} className={`card ${overconfident ? "border-danger/60" : ""}`}>
+                  <div className="flex items-start gap-2 mb-2 flex-wrap">
                     <span className="chip">D{q.domainId}</span>
+                    {overconfident && (
+                      <span className="pill bg-danger/15 text-danger text-[10px]">
+                        confident but wrong
+                      </span>
+                    )}
                     {a.flaggedMindset && <span className="pill bg-warn/15 text-warn text-[10px]">technician</span>}
                     {a.flaggedSpeed && <span className="pill bg-warn/15 text-warn text-[10px]">speed</span>}
                   </div>

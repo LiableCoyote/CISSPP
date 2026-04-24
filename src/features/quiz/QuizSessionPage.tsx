@@ -35,6 +35,7 @@ export default function QuizSessionPage() {
   const [startedAt] = useState(() => new Date());
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
+  const [confidence, setConfidence] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [nudge, setNudge] = useState<string | null>(null);
@@ -56,6 +57,7 @@ export default function QuizSessionPage() {
   useEffect(() => {
     questionStart.current = Date.now();
     setPicked(null);
+    setConfidence(null);
     setSubmitted(false);
     setShowExplanation(false);
     setNudge(null);
@@ -108,6 +110,7 @@ export default function QuizSessionPage() {
       flaggedMindset: tech,
       flaggedSpeed: speed,
       missCategory: null,
+      confidence,
     };
     setAnswers((a) => [...a, answer]);
     await db.answers.add(answer);
@@ -267,6 +270,38 @@ export default function QuizSessionPage() {
             );
           })}
         </div>
+
+        {!submitted && picked !== null && (
+          <div className="card mt-4">
+            <p className="text-xs uppercase tracking-wider text-dim mb-2" id={`conf-label-${q.id}`}>
+              How confident are you? (optional)
+            </p>
+            <div role="radiogroup" aria-labelledby={`conf-label-${q.id}`} className="flex justify-between gap-2">
+              {([
+                [1, "😰", "Guessing"],
+                [2, "😕", "Unsure"],
+                [3, "🤔", "Leaning"],
+                [4, "🙂", "Confident"],
+                [5, "💪", "Certain"],
+              ] as const).map(([val, emoji, label]) => (
+                <button
+                  key={val}
+                  role="radio"
+                  aria-checked={confidence === val}
+                  aria-label={`${label} — ${val} of 5`}
+                  onClick={() => setConfidence(confidence === val ? null : val)}
+                  className={`flex-1 min-h-[48px] rounded-lg border transition-colors text-2xl ${
+                    confidence === val
+                      ? "border-accent bg-accent/15"
+                      : "border-border bg-panel2 hover:border-accent/40"
+                  }`}
+                >
+                  <span aria-hidden="true">{emoji}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {nudge && (
           <div className="card mt-4 border-warn/40 bg-warn/5" role="alert">

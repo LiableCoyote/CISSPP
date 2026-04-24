@@ -99,6 +99,8 @@ export interface QuizAnswer {
   flaggedMindset: boolean;
   flaggedSpeed: boolean;
   missCategory: "mindset" | "knowledge" | "misread" | null;
+  // 1 (unsure) – 5 (confident). null means the user skipped the picker.
+  confidence: 1 | 2 | 3 | 4 | 5 | null;
 }
 
 export interface StudyDay {
@@ -159,6 +161,16 @@ class CissppDb extends Dexie {
       notes: "id, domainId",
       resources: "id",
     });
+    // v2: backfill `confidence: null` on existing answers. No index change needed.
+    this.version(2)
+      .stores({
+        answers: "id, attemptId, questionId",
+      })
+      .upgrade(async (tx) => {
+        await tx.table("answers").toCollection().modify((a: QuizAnswer) => {
+          if (a.confidence === undefined) a.confidence = null;
+        });
+      });
   }
 }
 

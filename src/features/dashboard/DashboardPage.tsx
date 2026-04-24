@@ -82,6 +82,16 @@ export default function DashboardPage() {
   const hoarderAlert = totalLast7 >= 3 && maxD / totalLast7 > 0.6;
   const hoarderDomain = Object.entries(domainHoard).find(([, v]) => v === maxD)?.[0];
 
+  // Cramming alert: 6+ attempts in a single domain over the last 2 days.
+  const last2 = attempts.filter((a) => differenceInCalendarDays(today, parseISO(a.startedAt)) <= 2);
+  const cram2d: Record<number, number> = {};
+  last2.forEach((a) => {
+    if (a.domainId) cram2d[a.domainId] = (cram2d[a.domainId] || 0) + 1;
+  });
+  const crammedMax = Math.max(0, ...Object.values(cram2d));
+  const crammingAlert = crammedMax >= 6;
+  const crammedDomain = Object.entries(cram2d).find(([, v]) => v === crammedMax)?.[0];
+
   return (
     <div className="page">
       <InstallPrompt />
@@ -186,6 +196,19 @@ export default function DashboardPage() {
               <span aria-hidden="true">⚠ </span>Domain Hoarder Alert:{" "}
             </span>
             You've drilled Domain {hoarderDomain} more than 60% of the past week. Time to rotate.
+          </p>
+        </div>
+      )}
+
+      {/* Cramming alert */}
+      {crammingAlert && (
+        <div className="card mb-4 border-warn/40 bg-warn/5" role="alert">
+          <p className="text-sm">
+            <span className="font-semibold text-warn">
+              <span aria-hidden="true">⏱ </span>Cramming detected:{" "}
+            </span>
+            {crammedMax} quizzes on Domain {crammedDomain} in 2 days. Try a mixed set or
+            flashcard review tomorrow — spaced repetition beats marathon drilling.
           </p>
         </div>
       )}
