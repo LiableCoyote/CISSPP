@@ -128,6 +128,9 @@ export interface ResourceState {
   updatedAt: string;
 }
 
+// Resolved once at module load — switching profiles requires a page reload
+const _activeSlot = localStorage.getItem("cisspp-active-slot") || "default";
+
 class CissppDb extends Dexie {
   profile!: Table<Profile, 1>;
   domains!: Table<Domain, DomainId>;
@@ -142,7 +145,7 @@ class CissppDb extends Dexie {
   resources!: Table<ResourceState, string>;
 
   constructor() {
-    super("cisspp");
+    super("cisspp-" + _activeSlot);
     this.version(1).stores({
       profile: "id",
       domains: "id, priority",

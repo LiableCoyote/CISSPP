@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import BottomNav from "./BottomNav";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import Onboarding from "./Onboarding";
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <a href="#main-content" className="sr-only sr-only-focusable">
         Skip to main content
       </a>
+      <Onboarding />
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
