@@ -1,0 +1,406 @@
+import type { Question } from "../db/schema";
+
+// Additional 35 questions across all domains to reach ~220 total
+export const EXTRA_QUESTIONS_2: Question[] = [
+  {
+    id: "ex2-d1-01",
+    domainId: 1,
+    prompt: "Which governance body is MOST responsible for setting the organization's risk appetite?",
+    options: [
+      "The Chief Risk Officer (CRO) unilaterally",
+      "The board of directors with input from executive leadership",
+      "The compliance team based on regulatory requirements",
+      "Shareholders at the annual meeting",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Risk appetite is a board-level decision reflecting strategy and risk tolerance. The CRO advises; compliance enforces minimums; shareholders vote on overall strategy.",
+    tags: ["governance", "risk-appetite", "board-oversight"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d1-02",
+    domainId: 1,
+    prompt: "In a privacy impact assessment (PIA), the PRIMARY goal is to:",
+    options: [
+      "Ensure compliance with data-protection laws",
+      "Identify privacy risks in a data-processing activity and determine mitigations before deployment",
+      "Audit systems after they are in production",
+      "Create documentation for regulators",
+    ],
+    answerIndex: 1,
+    explanation:
+      "A PIA is a forward-looking assessment conducted before systems go live. It identifies privacy risks (unlawful processing, data breaches, individual harm) and mitigations.",
+    tags: ["privacy", "pia", "risk-assessment"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d2-01",
+    domainId: 2,
+    prompt: "A data owner wants to limit access to sensitive data to 'only those who absolutely need it.' The BEST way to operationalize this is:",
+    options: [
+      "Define business roles that require the data and assign access accordingly; review quarterly",
+      "Let each department manager decide who gets access",
+      "Require explicit approval from the data owner for every access request",
+      "Grant access to all employees by default and remove exceptions",
+    ],
+    answerIndex: 0,
+    explanation:
+      "Roles create repeatable, scalable least-privilege access. Manual approvals for every request are unsustainable. Departmental ad-hoc and default-grant are not least privilege.",
+    tags: ["data-protection", "least-privilege", "access-control"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d2-02",
+    domainId: 2,
+    prompt: "Which of the following is a compensating control for the absence of full-disk encryption on a cloud-hosted virtual machine?",
+    options: [
+      "Using a strong password for the root/admin account",
+      "Enabling VM-level snapshots for backup and recovery",
+      "Restricting network access to the VM via firewalls and allowing access only from trusted IPs",
+      "Running antivirus software on the VM",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Network isolation prevents unauthorized access to the unencrypted disk. Passwords, snapshots, and antivirus do not compensate for lack of encryption.",
+    tags: ["encryption", "cloud-security", "compensating-controls"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d3-01",
+    domainId: 3,
+    prompt: "In an elliptic curve cryptography (ECC) system with a 256-bit key, what is the approximate equivalent symmetric key strength?",
+    options: ["128 bits", "256 bits", "512 bits", "1024 bits"],
+    answerIndex: 0,
+    explanation:
+      "ECC is more efficient than RSA. A 256-bit ECC key provides roughly 128-bit symmetric equivalent strength. RSA would require ~3072 bits for the same strength.",
+    tags: ["crypto", "ecc", "key-strength"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d3-02",
+    domainId: 3,
+    prompt: "Which characteristic of a hash function is necessary to prevent rainbow table attacks?",
+    options: ["Determinism", "Salt (per-user randomness)", "Speed", "Collusion resistance"],
+    answerIndex: 1,
+    explanation:
+      "Salt makes each hash unique even if two users share the same password, preventing lookup attacks. Determinism, speed, and collusion are unrelated to rainbow tables.",
+    tags: ["hashing", "salt", "password-security"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d4-01",
+    domainId: 4,
+    prompt: "Which of the following BEST prevents email spoofing?",
+    options: [
+      "Requiring TLS encryption for all outbound email",
+      "Implementing SPF, DKIM, and DMARC authentication frameworks",
+      "Using complex email passwords",
+      "Storing emails encrypted at rest",
+    ],
+    answerIndex: 1,
+    explanation:
+      "SPF, DKIM, and DMARC authenticate the sender and prevent spoofing. TLS encrypts the channel but does not verify sender identity. Passwords and encryption-at-rest are orthogonal.",
+    tags: ["email-security", "spoofing", "authentication"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d4-02",
+    domainId: 4,
+    prompt: "An organization discovers that confidential meeting notes were accidentally sent to a distribution list instead of an individual. What is the FIRST action?",
+    options: [
+      "Ask recipients to delete the email and send a follow-up apology",
+      "Immediately notify the information owner and privacy/legal; document the incident; assess notification obligations; implement controls to prevent recurrence",
+      "Review email logs to see who opened the email",
+      "No action — it was an accident and was quickly corrected",
+    ],
+    answerIndex: 1,
+    explanation:
+      "An unintended disclosure of sensitive data is an incident. Steps: notify the owner, assess legal obligations (breach notification), and implement preventive controls (e.g., email review workflows).",
+    tags: ["incident-response", "data-protection", "email-security"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d5-01",
+    domainId: 5,
+    prompt: "An access review process finds that a user in the Finance department has direct database access intended only for the DBA team. The user says they received it years ago and don't remember why. BEST action?",
+    options: [
+      "Revoke access immediately without further investigation",
+      "Ask the user to document the business justification; if none exists, revoke and close the finding",
+      "Leave the access in place since the user has been trusted for years",
+      "Require the user to take a security training course before deciding",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Access should be based on current role, not history or tenure. No documented justification = no approval. Revoke and implement periodic access reviews.",
+    tags: ["access-review", "least-privilege", "access-control"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d5-02",
+    domainId: 5,
+    prompt: "Which identity and access management (IAM) control is MOST critical for cloud environments with high staff turnover?",
+    options: [
+      "Implementing multi-factor authentication (MFA)",
+      "Automating joiner-mover-leaver (JML) processes to quickly provision and deprovision access",
+      "Using strong password policies",
+      "Requiring background checks",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Turnover creates orphaned accounts and delayed deprovisioning. Automated JML directly addresses this. MFA and passwords are controls; background checks are pre-hire.",
+    tags: ["iam", "jml", "account-lifecycle"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d6-01",
+    domainId: 6,
+    prompt: "Which type of testing is MOST effective at discovering OWASP Top 10 vulnerabilities in a web application?",
+    options: [
+      "Unit testing by the development team",
+      "Static Application Security Testing (SAST) and Dynamic Application Security Testing (DAST) combined with manual penetration testing",
+      "Manual code review only",
+      "Network-level firewalling and WAF rules",
+    ],
+    answerIndex: 1,
+    explanation:
+      "SAST finds flaws in code; DAST tests running apps; manual pen testing combines both. Unit tests are functional, not security-focused. WAF is defense-in-depth, not discovery.",
+    tags: ["appsec", "sast", "dast", "penetration-testing"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d6-02",
+    domainId: 6,
+    prompt: "A developer asks whether it is safe to store API credentials in a .env file committed to the source code repository. The appropriate response is:",
+    options: [
+      "Yes, as long as the repository is private",
+      "No; use a secrets management system and ensure .env is in .gitignore",
+      "Yes, if the credentials are hashed",
+      "Yes, as long as the repository has branch protection enabled",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Committing secrets (even to private repos) is dangerous: former employees, build logs, repository mirrors, and accidental public access are risks. Use secrets managers.",
+    tags: ["credential-management", "secrets", "secure-coding"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d6-03",
+    domainId: 6,
+    prompt: "An API endpoint requires a user ID and does not validate that the requesting user owns the resource being accessed. This is an example of:",
+    options: [
+      "Broken authentication",
+      "Broken access control (IDOR — Insecure Direct Object Reference)",
+      "Insufficient logging",
+      "Weak cryptography",
+    ],
+    answerIndex: 1,
+    explanation:
+      "IDOR is when users can access resources they do not own by changing a parameter (e.g., user ID). The authentication succeeds, but authorization is missing.",
+    tags: ["access-control", "idor", "owasp-top-10"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d7-01",
+    domainId: 7,
+    prompt: "An organization has not conducted an incident response drill in 2 years. What is the PRIMARY risk?",
+    options: [
+      "The organization will miss the annual budget cycle",
+      "Key personnel may no longer be available; procedures may be outdated; team coordination will be untested during a real incident",
+      "Incidents will be more frequent",
+      "The organization will fail compliance audits",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Drills validate and maintain IR readiness. Without them, staff change, procedures become stale, and execution suffers during real incidents.",
+    tags: ["incident-response", "drills", "tabletop-exercise"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d7-02",
+    domainId: 7,
+    prompt: "During an incident, the IR lead decides to preserve the compromised system for forensic analysis before any remediation. This decision:",
+    options: [
+      "Is always correct — forensics are paramount",
+      "Must balance forensic value against business impact (downtime, continued risk); if downtime cost exceeds forensic benefit, remediate and collect logs instead",
+      "Should be made by the forensics team alone",
+      "Should never be made; remediation always takes priority",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Forensics vs. business impact is a trade-off. A critical system must be restored to prevent further loss. Logs and remote memory capture are alternatives to full preservation.",
+    tags: ["incident-response", "forensics", "containment"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d7-03",
+    domainId: 7,
+    prompt: "An incident is detected at 10 AM. Forensic analysis begins and completes at 8 PM. The organization's MTTD is which of the following?",
+    options: ["10 hours", "8 hours", "0 hours (instant detection)", "Unable to determine without knowing when the incident actually occurred"],
+    answerIndex: 3,
+    explanation:
+      "MTTD is from incident start to detection. If the incident began at 8 AM and was detected at 10 AM, MTTD = 2 hours. We don't know the actual start time from the information given.",
+    tags: ["incident-response", "mttd", "metrics"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d8-01",
+    domainId: 8,
+    prompt: "A Business Impact Analysis (BIA) should include:",
+    options: [
+      "A list of all IT systems and their specifications",
+      "Identification of critical business processes, their dependencies, maximum tolerable downtime, and data-recovery objectives",
+      "A comprehensive security assessment of all assets",
+      "An inventory of all employee roles and responsibilities",
+    ],
+    answerIndex: 1,
+    explanation:
+      "BIA identifies what must recover, when, and what data loss is acceptable. It drives RTO/RPO and informs the recovery strategy.",
+    tags: ["bcp", "bia"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d8-02",
+    domainId: 8,
+    prompt: "An organization's RTO for a critical application is 4 hours, but the actual recovery has taken 8–12 hours in recent tests. What is the appropriate governance action?",
+    options: [
+      "Extend the RTO to 12 hours to match current capability",
+      "Escalate the gap to leadership; fund recovery improvements OR formally accept the residual risk",
+      "Conduct more frequent drills until recovery improves",
+      "Blame the IT team for being slow",
+    ],
+    answerIndex: 1,
+    explanation:
+      "RTO is set by business impact, not IT capability. A gap requires executive decision: invest in faster recovery or accept the risk. More drills won't change the capability.",
+    tags: ["bcp", "rto", "risk-acceptance", "governance"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d1-03",
+    domainId: 1,
+    prompt: "Which of the following BEST demonstrates proactive risk management?",
+    options: [
+      "Responding quickly to breaches when they occur",
+      "Identifying threats and vulnerabilities early, implementing controls, and monitoring for residual risk",
+      "Following compliance checklists",
+      "Hiring more security staff",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Proactive = prevention + early detection. Reactive = response after breach. Staff, compliance, and incident response are necessary but not sufficient for proactive management.",
+    tags: ["risk-management", "governance"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d2-03",
+    domainId: 2,
+    prompt: "An organization discovers that an external vendor accidentally retained a backup copy of customer data 18 months after the contract ended. The appropriate response is:",
+    options: [
+      "No action — the data was not breached",
+      "Escalate to Legal and Privacy; assess breach notification obligations; update vendor contracts to include data-destruction clauses with verification",
+      "Ask the vendor to delete the data immediately and move on",
+      "Conduct a forensic analysis of the backup",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Unauthorized retention is a data-handling failure. Legal/Privacy must assess notification requirements. Contracts must mandated destruction + proof.",
+    tags: ["third-party", "data-destruction", "privacy"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d3-03",
+    domainId: 3,
+    prompt: "A company uses TLS 1.2 for all HTTPS traffic. Which statement BEST describes the security posture?",
+    options: [
+      "This is the latest TLS version; encryption is bulletproof",
+      "TLS 1.2 is strong, but TLS 1.3 offers better security; plan to upgrade when feasible, while ensuring backward compatibility",
+      "TLS 1.2 is outdated; the company must upgrade immediately",
+      "TLS version is irrelevant; cipher strength is what matters",
+    ],
+    answerIndex: 1,
+    explanation:
+      "TLS 1.2 is still widely supported and secure. TLS 1.3 is newer and recommended for new deployments. Upgrade planning balances security and compatibility.",
+    tags: ["tls", "encryption", "crypto"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d4-03",
+    domainId: 4,
+    prompt: "Which of the following is a valid data-loss prevention (DLP) control for preventing sensitive data exfiltration via email?",
+    options: [
+      "Blocking all email attachments",
+      "Scanning outbound emails for sensitive data patterns and blocking or quarantining high-risk messages",
+      "Requiring passwords on all email accounts",
+      "Using email encryption for all messages",
+    ],
+    answerIndex: 1,
+    explanation:
+      "DLP scans for sensitive content (patterns, keywords, file types) and enforces policies. Blocking all attachments is excessive. Passwords and encryption-for-all are insufficient.",
+    tags: ["dlp", "data-protection", "email-security"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d5-03",
+    domainId: 5,
+    prompt: "An internal audit identifies that privileged accounts (e.g., database admin) are shared among multiple IT staff. What is the BEST remediation?",
+    options: [
+      "Rotate the shared password more frequently",
+      "Implement individual accounts with privileged access management (PAM), audit logging, and just-in-time (JIT) elevation",
+      "Require staff to get approval before using the shared account",
+      "Implement multi-factor authentication on the shared account",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Shared accounts prevent individual accountability. PAM with individual accounts, JIT, and audit logging are the control. Approvals, password rotation, and MFA are supplements.",
+    tags: ["pam", "privileged-access", "shared-accounts"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d6-04",
+    domainId: 6,
+    prompt: "A security assessment finds that developers commit code directly to the main branch without code review. The PRIMARY security risk is:",
+    options: [
+      "Slow deployment cycles",
+      "Unreviewed code increases the likelihood of security flaws and malicious code reaching production",
+      "Loss of historical records",
+      "Difficulty rolling back changes",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Code review is a preventive control for injection flaws, logic errors, and insider threats. Without it, flaws go live. Deployment speed, history, and rollback are operational concerns.",
+    tags: ["code-review", "sdlc", "secure-development"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex2-d7-04",
+    domainId: 7,
+    prompt: "An organization discovers a data breach from 6 months ago that was not previously detected. What is the FIRST priority?",
+    options: [
+      "Fire the team that missed the breach",
+      "Contain the current state, assess scope, notify affected parties per law, and immediately implement detection improvements",
+      "Conduct a forensic analysis",
+      "Issue a public statement taking responsibility",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Immediate actions: contain, assess, notify, improve detection. Forensics, accountability, and communications follow. Speed is critical for notification deadlines.",
+    tags: ["incident-response", "breach-notification"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex2-d8-03",
+    domainId: 8,
+    prompt: "During a disaster recovery test, a critical system fails to recover within the RTO. Which governance body should be notified FIRST?",
+    options: [
+      "The IT vendor",
+      "The recovery team to fix the procedures",
+      "Executive leadership and the business owner; they own the risk decision",
+      "The external auditors",
+    ],
+    answerIndex: 2,
+    explanation:
+      "RTO failure is a risk event. Leadership must decide: invest to improve, accept extended downtime, or change operations. This is a governance decision, not an IT execution issue.",
+    tags: ["bcp", "drp", "governance"],
+    isMindsetHeavy: true,
+  },
+];

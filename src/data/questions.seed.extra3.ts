@@ -1,0 +1,453 @@
+import type { Question } from "../db/schema";
+
+// Final batch: 40 additional questions to exceed 250 total
+export const EXTRA_QUESTIONS_3: Question[] = [
+  {
+    id: "ex3-d1-01",
+    domainId: 1,
+    prompt: "Which type of risk acceptance is MOST appropriate for low-severity, residual risks after controls are implemented?",
+    options: [
+      "Never accept any risk — implement additional controls",
+      "Implicit acceptance without documentation",
+      "Explicit, documented acceptance by an accountable executive owner with periodic review",
+      "Accept only if cost to mitigate exceeds the asset value",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Risk acceptance is governance. Even residual risks require explicit documentation and an accountable owner. Review ensures acceptance remains valid.",
+    tags: ["risk-acceptance", "governance"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d1-02",
+    domainId: 1,
+    prompt: "A supplier security breach affects the organization's supply chain. What is the PRIMARY security governance failure?",
+    options: [
+      "The organization did not conduct background checks on supplier employees",
+      "Third-party risk management and due diligence controls were insufficient before the breach occurred",
+      "The organization did not have insurance to cover the supplier breach",
+      "The breach was unforeseeable and thus unpreventable",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Third-party risk governance is the responsibility of the organization. Assessments, contracts (DPA, liability), and monitoring are required before issues arise.",
+    tags: ["third-party-risk", "governance", "supply-chain"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d2-01",
+    domainId: 2,
+    prompt: "Which of the following BEST reflects data ownership in a cloud environment?",
+    options: [
+      "The cloud provider owns all data stored in their infrastructure",
+      "The organization retains data ownership; the cloud provider is the custodian and must follow data-handling instructions",
+      "Data ownership is shared equally between the organization and the cloud provider",
+      "Ownership is determined by who pays for the storage",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Cloud contracts make clear: the organization owns the data; the provider is a processor/custodian. The contract defines duties, security requirements, and data rights.",
+    tags: ["cloud-security", "data-ownership", "third-party"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d2-02",
+    domainId: 2,
+    prompt: "An organization has classified customer contact information as 'Public' but the CEO wants to keep it confidential from competitors. What is the BEST approach?",
+    options: [
+      "Reclassify it as 'Confidential' to enforce stronger controls",
+      "Keep the public classification but add business need-based access restrictions; document the policy exception",
+      "Assume the public classification is correct and do not add controls",
+      "Encrypt the data to compensate for the low classification",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Classification reflects legal/regulatory status (contact info is often public). Business secrecy is separate: use access controls + need-to-know. Exception policies bridge the gap.",
+    tags: ["data-classification", "access-control"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d3-01",
+    domainId: 3,
+    prompt: "A startup uses OpenSSL version 3 years old. What is the PRIMARY risk?",
+    options: [
+      "The startup will be non-compliant with PCI-DSS",
+      "Known vulnerabilities in the old version could be exploited; the startup should update to the latest stable version",
+      "Old OpenSSL is slower and will impact performance",
+      "The licensing terms of old OpenSSL are outdated",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Old software contains known CVEs. Updates fix these. Compliance, performance, and licensing are secondary to the security gaps.",
+    tags: ["patch-management", "vulnerabilities"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d3-02",
+    domainId: 3,
+    prompt: "In a key rotation strategy, which of the following BEST ensures data encrypted with old keys remains accessible?",
+    options: [
+      "Keep the old keys indefinitely in case they are needed",
+      "Destroy old keys immediately after rotation to prevent misuse",
+      "Maintain old keys in a secure archive and establish a re-encryption process for data encrypted under old keys",
+      "Use the same key for all encryption to avoid rotation entirely",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Rotation improves key security; old keys are needed to decrypt existing data. Archive them securely; re-encrypt bulk data to new keys over time.",
+    tags: ["key-management", "rotation"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d4-01",
+    domainId: 4,
+    prompt: "An organization's email system does not support DMARC. What is the best interim compensating control?",
+    options: [
+      "Instruct users to never trust emails from unknown senders",
+      "Implement DKIM + SPF and add prominent email authentication headers and footer warnings; plan to add DMARC soon",
+      "Use a gateway filter to block external emails claiming to be from your domain",
+      "Require all emails to be encrypted",
+    ],
+    answerIndex: 2,
+    explanation:
+      "DMARC is the gold standard. Pending implementation, DKIM + SPF + gateway enforcement (block external emails posing as internal) reduce spoofing risk.",
+    tags: ["email-security", "spoofing", "compensating-controls"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d4-02",
+    domainId: 4,
+    prompt: "A user receives a phishing email claiming to be from IT requesting password reset. What is the MOST secure user response?",
+    options: [
+      "Click the link to 'reset' immediately",
+      "Reply to the email asking for verification",
+      "Do not click links; navigate directly to the IT website or call IT directly to verify the request",
+      "Delete the email",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Never click email links or reply. Go directly to the company site or call IT. Phishing emails mimic legitimate sources; direct contact is the only safe verification.",
+    tags: ["phishing", "email-security", "user-awareness"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d5-01",
+    domainId: 5,
+    prompt: "Which IAM scenario BEST demonstrates the principle of least privilege in action?",
+    options: [
+      "A user has access to all systems in their department to 'stay flexible'",
+      "An accountant can view general ledger but cannot approve payments; a payment approver can approve but cannot modify journal entries",
+      "All users have the same baseline access regardless of role",
+      "Access is granted for the entire fiscal year without review",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Least privilege means each user gets exactly what they need for their role, no more. SoD ensures different people handle different phases. Flexibility and universal access violate the principle.",
+    tags: ["least-privilege", "sod", "iam"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d5-02",
+    domainId: 5,
+    prompt: "A contractor's access should remain active for 3 months beyond their contract end date to 'provide documentation support.' What is the BEST response?",
+    options: [
+      "Grant the extended access to maintain continuity",
+      "Revoke access on the contract end date; if documentation support is needed, issue temporary re-provisioning with explicit approval and monitoring",
+      "Grant access until the end of the fiscal year as a courtesy",
+      "Keep the account active indefinitely in case the contractor returns",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Contractors must be de-provisioned on-schedule. Exceptions require formal re-provisioning with documented justification, not just extended standing access.",
+    tags: ["account-lifecycle", "jml", "contractors"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d6-01",
+    domainId: 6,
+    prompt: "Which of the following BEST represents secure-by-default architecture?",
+    options: [
+      "A system is deployed with all features enabled and relies on users to disable risky features",
+      "A system is deployed with minimal functionality enabled; users must explicitly enable features they need",
+      "A system is secure if it passes a final penetration test before release",
+      "Security is added in patches after customer reports vulnerabilities",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Secure-by-default: the minimum necessary functionality is enabled; users opt-in to additional features. This minimizes the attack surface.",
+    tags: ["secure-by-default", "architecture", "secure-development"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d6-02",
+    domainId: 6,
+    prompt: "A developer implements a feature to 'remember me' by storing a session token in a long-lived browser cookie. What is the BEST security improvement?",
+    options: [
+      "Encrypt the token",
+      "Use a short-lived token with refresh; bind the token to device characteristics; ensure HTTPOnly and Secure flags",
+      "Use a static token that never expires",
+      "Store the user ID in the cookie instead of a token",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Tokens must be short-lived, refreshable, device-bound, and protected (HTTPOnly, Secure). Long-lived static tokens are a breach waiting to happen.",
+    tags: ["session-management", "tokens", "secure-coding"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d7-01",
+    domainId: 7,
+    prompt: "An organization's incident response plan has not been tested in 3 years. What is the BEST governance decision?",
+    options: [
+      "Skip testing this year due to budget constraints; resume next year",
+      "Schedule an immediate tabletop exercise; a stale plan + untrained team will fail during a real incident",
+      "Only test critical scenarios to save time",
+      "Hire an external consultant to test in your place",
+    ],
+    answerIndex: 1,
+    explanation:
+      "3-year gaps are dangerous. Procedures change, staff turns over, tools evolve. An immediate test (tabletop is low-cost) is essential.",
+    tags: ["incident-response", "testing", "governance"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d7-02",
+    domainId: 7,
+    prompt: "During incident response, evidence must be handled to preserve its admissibility in legal proceedings. Which principle is MOST critical?",
+    options: [
+      "Collect as much data as possible",
+      "Maintain a clear chain of custody; document who accessed evidence, when, and for what purpose",
+      "Seal evidence in a locked room until trial",
+      "Photograph evidence before preservation",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Chain of custody (CoC) proves evidence has not been tampered with or modified. Breaks in CoC can render evidence inadmissible in court.",
+    tags: ["forensics", "evidence-handling", "chain-of-custody"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d8-01",
+    domainId: 8,
+    prompt: "An organization's BCP identifies a 2-hour RTO for a mission-critical system, but the backup site is 500 miles away. What is the PRIMARY constraint?",
+    options: [
+      "Distance itself is the problem; move the backup site closer",
+      "Network latency and failover coordination time may prevent meeting a 2-hour RTO with a remote site; evaluate split-site or multi-region active-active",
+      "Insurance will not cover a remote backup site",
+      "The RTO is impossible to achieve with any technology",
+    ],
+    answerIndex: 1,
+    explanation:
+      "A 2-hour RTO requires fast failover. A 500-mile site has network latency and coordination overhead. Consider split-site (closer), active-active, or relax the RTO.",
+    tags: ["bcp", "drp", "rto"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d8-02",
+    domainId: 8,
+    prompt: "During a BCP test, the backup generator fails to start. This reveals:",
+    options: [
+      "The BCP is worthless and should be abandoned",
+      "A critical failure in a key recovery resource; the generator must be repaired or replaced, and the test should be re-run after remediation",
+      "The test was poorly designed",
+      "No action is needed if the primary power is stable",
+    ],
+    answerIndex: 1,
+    explanation:
+      "BCP tests reveal real failures. The generator failure is a material gap. Fix it and retest. Do not ignore findings.",
+    tags: ["bcp", "testing", "resilience"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d1-03",
+    domainId: 1,
+    prompt: "A risk assessment identifies that an organization lacks formal security policies. How should this finding be prioritized?",
+    options: [
+      "Low priority — policies are just documentation and do not prevent breaches",
+      "Critical priority — policies are the foundation of governance; without them, no one is accountable and controls are ad-hoc",
+      "Medium priority — focus on technical controls first",
+      "Defer until a breach occurs",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Policies define roles, expectations, and accountability. Without them, controls are inconsistent and unmaintainable. Policies are foundational.",
+    tags: ["governance", "policies"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d2-04",
+    domainId: 2,
+    prompt: "An organization stores backups offline in a vault. The BEST reason for this practice is:",
+    options: [
+      "To save money on storage hardware",
+      "To protect backups from ransomware that might encrypt online systems",
+      "To comply with archival laws",
+      "To improve backup performance",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Offline (air-gapped) backups prevent ransomware from corrupting the recovery point. They are a critical resilience control.",
+    tags: ["backup", "ransomware", "resilience"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d3-04",
+    domainId: 3,
+    prompt: "Which cryptographic algorithm is MOST vulnerable to quantum computing attacks?",
+    options: [
+      "AES-256",
+      "SHA-256",
+      "RSA and elliptic curve cryptography (ECC) — quantum computers can factor large numbers and compute discrete logs",
+      "Passwords",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Shor's algorithm breaks RSA and ECC. Symmetric (AES) and hash (SHA) remain strong. Post-quantum cryptography research is ongoing.",
+    tags: ["crypto", "quantum-computing"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d4-04",
+    domainId: 4,
+    prompt: "Which of the following is the BEST practice for handling sensitive email?",
+    options: [
+      "Send sensitive data only to trusted recipients",
+      "Use email encryption/TLS for all sensitive emails; consider brief messages + secure portals for large data",
+      "Require the recipient to reply confirming receipt",
+      "Mark emails as 'Confidential' but do not encrypt",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Email is not inherently secure. Encryption (TLS, S/MIME) and portals are necessary for sensitive data. Markings and trust are insufficient.",
+    tags: ["email-security", "encryption", "data-protection"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d5-04",
+    domainId: 5,
+    prompt: "An organization implements a new identity provider (IdP) but fails to de-commission the old one. What is the PRIMARY security risk?",
+    options: [
+      "Users will be confused about which IdP to use",
+      "Orphaned accounts in the old system may persist indefinitely; attackers could reactivate them",
+      "The new IdP will be slower due to competition for resources",
+      "Licensing costs will double",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Legacy systems leave orphaned accounts. Without de-commissioning and cleanup, old accounts become unmanaged and exploitable.",
+    tags: ["iam", "account-lifecycle", "decommissioning"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d6-05",
+    domainId: 6,
+    prompt: "A code review identifies that developers use a logging library that accidentally logs environment variables including API keys. The BEST fix is:",
+    options: [
+      "Tell developers to be careful not to log variables",
+      "Search log archives and redact any keys found; update the logging library to have a redaction filter for sensitive patterns",
+      "Rotate all API keys immediately and implement secret scanning in CI/CD",
+      "Disable logging entirely",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Immediate actions: rotate exposed keys, implement secret scanning to prevent future leaks. Redaction and library updates are follow-up controls.",
+    tags: ["credential-management", "logging", "secret-scanning"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d7-05",
+    domainId: 7,
+    prompt: "An organization discovers that a terminated employee's VPN account was never disabled. What is the appropriate priority and response?",
+    options: [
+      "Low priority; the employee is no longer a threat",
+      "Critical; immediately revoke the account and investigate access logs; check if former employee accessed systems post-termination",
+      "Medium priority; disable the account at the end of the month",
+      "High priority; assume the account was used maliciously and require a full audit",
+    ],
+    answerIndex: 1,
+    explanation:
+      "This is a material security gap. The terminated employee could still access systems. Immediate revocation and investigation of activity are essential.",
+    tags: ["account-lifecycle", "jml", "incident-response"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d8-04",
+    domainId: 8,
+    prompt: "What is the BEST practice for storing and accessing critical BCP/DRP documentation?",
+    options: [
+      "Store in cloud storage with standard access control",
+      "Store both electronic and hardcopy versions in secure, geographically separated locations; ensure 24/7 accessible summaries",
+      "Store only electronically to save space",
+      "Distribute to all employees so they can access it anytime",
+    ],
+    answerIndex: 1,
+    explanation:
+      "BCP docs must survive the same disaster they address. Redundancy (hardcopy + electronic), separation, and accessibility are critical.",
+    tags: ["bcp", "documentation", "resilience"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d1-04",
+    domainId: 1,
+    prompt: "An organization's risk register shows that risks are tracked but no risk owner is assigned. What is the consequence?",
+    options: [
+      "Risks will be managed by the entire company collectively",
+      "No one is accountable; risks are unlikely to be mitigated; escalation and prioritization will fail",
+      "The organization will appear proactive to auditors even without actual mitigation",
+      "Risk owners can be assigned later, after the risks are identified",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Ownership is essential for governance. Without it, accountability is diffused and risks languish. Owners drive mitigation and escalation.",
+    tags: ["risk-management", "accountability"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d2-05",
+    domainId: 2,
+    prompt: "Which of the following is an example of a valid reason to NOT encrypt data?",
+    options: [
+      "Encryption slows down searches",
+      "Users might forget encryption keys",
+      "The data is low-sensitivity and low-impact if disclosed; cost of encryption + key management exceeds the risk",
+      "The organization does not have budget for encryption tools",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Encryption is a control. Like all controls, it must be cost-justified. Low-sensitivity, low-impact data may not warrant encryption. Budget is a business constraint, not a security decision.",
+    tags: ["encryption", "data-protection", "cost-benefit"],
+    isMindsetHeavy: true,
+  },
+  {
+    id: "ex3-d3-05",
+    domainId: 3,
+    prompt: "An application uses a predictable random number generator (RNG) for generating session tokens. What is the PRIMARY risk?",
+    options: [
+      "Performance will be slow",
+      "Tokens will be short and easy to remember",
+      "An attacker can predict future tokens and forge sessions",
+      "Session tokens will not be portable between systems",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Predictable RNGs enable token forgery. Session tokens must use cryptographically strong RNGs (e.g., os.urandom(), SecureRandom).",
+    tags: ["randomness", "crypto", "secure-coding"],
+    isMindsetHeavy: false,
+  },
+  {
+    id: "ex3-d4-05",
+    domainId: 4,
+    prompt: "An organization implements email archival to comply with retention requirements. The PRIMARY security control needed alongside archival is:",
+    options: [
+      "Encryption of archived data to protect it from disclosure",
+      "Restricting who can access the archive based on data classification and role",
+      "Both encryption and access control, plus periodic testing of recovery procedures",
+      "Regular deletion of old archives to prevent storage bloat",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Archived email is sensitive data. Encryption (at rest and in transit), access control, and recovery testing are all required.",
+    tags: ["email-archival", "encryption", "access-control"],
+    isMindsetHeavy: false,
+  },
+];
