@@ -6,10 +6,43 @@ import { ALL_QUESTIONS } from "../data/questions.seed";
 import { RESOURCES } from "../data/resources";
 import type { Profile, Quest } from "./schema";
 
+/**
+ * Adds content shipped after the user's DB was first seeded. Only inserts rows
+ * whose id is missing, so existing SRS progress, quiz history and watched flags
+ * are never touched.
+ */
+async function syncSeedContent() {
+  const now = new Date().toISOString();
+
+  const cardIds = new Set(await db.flashcards.toCollection().primaryKeys());
+  const newCards = buildFlashcardSeed().filter((c) => !cardIds.has(c.id));
+  if (newCards.length > 0) await db.flashcards.bulkAdd(newCards);
+
+  const questionIds = new Set(await db.questions.toCollection().primaryKeys());
+  const newQuestions = ALL_QUESTIONS.filter((q) => !questionIds.has(q.id));
+  if (newQuestions.length > 0) await db.questions.bulkAdd(newQuestions);
+
+  const resourceIds = new Set(await db.resources.toCollection().primaryKeys());
+  const newResources = RESOURCES.filter((r) => !resourceIds.has(r.id)).map((r) => ({
+    id: r.id,
+    watched: false,
+    updatedAt: now,
+  }));
+  if (newResources.length > 0) await db.resources.bulkAdd(newResources);
+
+  const total = newCards.length + newQuestions.length + newResources.length;
+  if (total > 0) {
+    console.log(
+      `✅ Synced new content: ${newCards.length} cards, ${newQuestions.length} questions, ${newResources.length} resources`,
+    );
+  }
+}
+
 export async function initializeDb() {
   const existingProfile = await db.profile.get(1);
   if (existingProfile) {
-    return; // Already seeded
+    await syncSeedContent();
+    return;
   }
 
   const now = new Date().toISOString();

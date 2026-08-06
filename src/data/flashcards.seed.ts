@@ -1,11 +1,7 @@
-import type { DomainId, Flashcard } from "../db/schema";
+import type { Flashcard } from "../db/schema";
+import { EXTRA_SEEDS, type FlashcardSeed } from "./flashcards.seed.extra";
 
-type Seed = {
-  front: string;
-  back: string;
-  domainId: DomainId | null;
-  tags: string[];
-};
+type Seed = FlashcardSeed;
 
 const SEEDS: Seed[] = [
   // Risk formulas (D1)
@@ -86,9 +82,15 @@ const SEEDS: Seed[] = [
   { front: "CAT format — can you go back?", back: "NO. Ever. Submit and forget. Never spend more than 90s on one question.", domainId: null, tags: ["exam"] },
 ];
 
+/**
+ * Card ids are `seed-<index>`, so this array is APPEND ONLY. Reordering or
+ * inserting would re-key existing cards and discard their SRS history.
+ */
+const ALL_SEEDS: Seed[] = [...SEEDS, ...EXTRA_SEEDS];
+
 export function buildFlashcardSeed(): Flashcard[] {
   const now = new Date().toISOString();
-  return SEEDS.map((s, i) => ({
+  return ALL_SEEDS.map((s, i) => ({
     id: `seed-${i}`,
     front: s.front,
     back: s.back,

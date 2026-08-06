@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { VAULT_TABLES, BCP_STEPS, IR_PHASES, OSI_LAYERS } from "../../data/vault";
+import { AnimatePresence } from "framer-motion";
+import { VAULT_TABLES, ORDER_GAMES } from "../../data/vault";
 import OrderGame from "./OrderGame";
+import QuickTestMode from "./QuickTestMode";
 
 export default function VaultPage() {
   const [reading, setReading] = useState(false);
+  const [activeGameId, setActiveGameId] = useState(ORDER_GAMES[0].id);
+  const [testing, setTesting] = useState(false);
+
+  const activeGame = ORDER_GAMES.find((g) => g.id === activeGameId) || ORDER_GAMES[0];
 
   return (
     <div className={reading ? "min-h-screen bg-bg p-4 max-w-3xl mx-auto safe-top safe-bottom" : "page"}>
@@ -32,26 +38,49 @@ export default function VaultPage() {
 
       {!reading && (
         <>
-          <h2 className="text-lg font-semibold mb-3 mt-6">🎮 Order Mini-Games</h2>
-          <div className="space-y-3 mb-8">
+          <div className="flex items-baseline justify-between mb-3 mt-6">
+            <h2 className="text-lg font-semibold">
+              <span aria-hidden="true">🎮 </span>Order Mini-Games
+            </h2>
+            <span className="text-xs text-dim">{ORDER_GAMES.length} sequences</span>
+          </div>
+
+          {/* Sequence picker — keeps one game on screen instead of a 12-game wall. */}
+          <div
+            className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-3"
+            role="tablist"
+            aria-label="Choose a sequence to drill"
+          >
+            {ORDER_GAMES.map((g) => (
+              <button
+                key={g.id}
+                role="tab"
+                aria-selected={g.id === activeGameId}
+                onClick={() => setActiveGameId(g.id)}
+                className={`chip text-xs px-3 py-1.5 whitespace-nowrap shrink-0 border transition-colors ${
+                  g.id === activeGameId
+                    ? "bg-accent/15 text-accent border-accent/40"
+                    : "bg-panel2 text-dim border-transparent hover:text-ink"
+                }`}
+              >
+                {g.title}
+              </button>
+            ))}
+          </div>
+
+          <div className="mb-8">
             <OrderGame
-              title="BCP Order of Operations"
-              hint="Drag to order. BIA FIRST — always."
-              canonicalOrder={BCP_STEPS}
-            />
-            <OrderGame
-              title="NIST 800-61 Incident Response Phases"
-              hint="Four phases, in order."
-              canonicalOrder={IR_PHASES}
-            />
-            <OrderGame
-              title="OSI Model (top → bottom)"
-              hint="All People Seem To Need Data Processing."
-              canonicalOrder={OSI_LAYERS}
+              key={activeGame.id}
+              title={activeGame.title}
+              hint={activeGame.hint}
+              canonicalOrder={activeGame.order}
+              onQuickTest={() => setTesting(true)}
             />
           </div>
 
-          <h2 className="text-lg font-semibold mb-3">📋 Reference Tables</h2>
+          <h2 className="text-lg font-semibold mb-3">
+            <span aria-hidden="true">📋 </span>Reference Tables
+          </h2>
         </>
       )}
 
@@ -87,6 +116,27 @@ export default function VaultPage() {
           </div>
         ))}
       </div>
+
+      {/* Sequences aren't in the printed tables — append them so the cheat sheet is complete. */}
+      <div className="hidden print:block mt-6">
+        <h2 className="text-lg font-semibold mb-3">Sequences</h2>
+        <div className="space-y-4">
+          {ORDER_GAMES.map((g) => (
+            <div key={g.id}>
+              <h3 className="font-semibold text-sm">{g.title}</h3>
+              <ol className="text-sm list-decimal ml-5">
+                {g.order.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {testing && <QuickTestMode game={activeGame} onClose={() => setTesting(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

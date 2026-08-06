@@ -19,6 +19,7 @@ const DomainsPage = lazy(() => import("./features/domains/DomainsPage"));
 const DomainDetailPage = lazy(() => import("./features/domains/DomainDetailPage"));
 const VaultPage = lazy(() => import("./features/vault/VaultPage"));
 const StatsPage = lazy(() => import("./features/stats/StatsPage"));
+const AchievementsPage = lazy(() => import("./features/achievements/AchievementsPage"));
 const ResourcesPage = lazy(() => import("./features/resources/ResourcesPage"));
 const SettingsPage = lazy(() => import("./features/settings/SettingsPage"));
 
@@ -82,6 +83,7 @@ function App() {
                     <Route path="/domains/:id" element={<DomainDetailPage />} />
                     <Route path="/vault" element={<VaultPage />} />
                     <Route path="/stats" element={<StatsPage />} />
+                    <Route path="/achievements" element={<AchievementsPage />} />
                     <Route path="/resources" element={<ResourcesPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="*" element={<div className="page text-center text-dim">404 · Page not found</div>} />

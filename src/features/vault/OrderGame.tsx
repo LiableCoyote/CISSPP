@@ -5,6 +5,8 @@ interface Props {
   title: string;
   canonicalOrder: string[];
   hint?: string;
+  /** When provided, renders a Quick Test button alongside the check controls. */
+  onQuickTest?: () => void;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -16,7 +18,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export default function OrderGame({ title, canonicalOrder, hint }: Props) {
+export default function OrderGame({ title, canonicalOrder, hint, onQuickTest }: Props) {
   const [items, setItems] = useState<string[]>(() => shuffle(canonicalOrder));
   const [checked, setChecked] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -112,6 +114,12 @@ export default function OrderGame({ title, canonicalOrder, hint }: Props) {
           </>
         )}
       </div>
+
+      {onQuickTest && (
+        <button onClick={onQuickTest} className="btn-outline w-full mt-2">
+          <span aria-hidden="true">⚡ </span>Quick Test — 5 recall questions
+        </button>
+      )}
     </section>
   );
 }

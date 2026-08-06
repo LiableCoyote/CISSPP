@@ -162,9 +162,9 @@ export default function DashboardPage() {
             <h3 id="recent-unlocks-heading" className="font-semibold">
               <span aria-hidden="true">🏆 </span>Achievements
             </h3>
-            <span className="text-xs text-dim">
-              {unlockCount} / {ACHIEVEMENT_DEFS.length}
-            </span>
+            <Link to="/achievements" className="text-xs text-accent hover:underline">
+              {unlockCount} / {ACHIEVEMENT_DEFS.length} →
+            </Link>
           </div>
           <ul className="space-y-2" role="list">
             {unlocks.map((u) => {
