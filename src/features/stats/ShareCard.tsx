@@ -7,14 +7,35 @@ import { db } from "../../db/schema";
 import { DOMAINS } from "../../data/domains";
 import { xpToLevel } from "../../lib/xp";
 import { pushToast } from "../../state/toast";
+import { buildWeeklySummary, weeklyHeadline } from "../../lib/analytics";
+
+/** Renders "+12" / "−4" / "even" for a week-over-week change. */
+function Delta({ value, unit }: { value: number; unit: string }) {
+  const color = value > 0 ? "#6ee7b7" : value < 0 ? "#f87171" : "#556076";
+  const text = value === 0 ? "even" : `${value > 0 ? "+" : "−"}${Math.abs(value)} ${unit}`;
+  return (
+    <span className="text-[10px]" style={{ color }}>
+      {text}
+    </span>
+  );
+}
 
 export default function ShareCard() {
   const { profile } = useProfile();
   const attempts = useLiveQuery(() => db.attempts.toArray()) || [];
+  const studyLog = useLiveQuery(() => db.studyLog.toArray()) || [];
+  const unlocks = useLiveQuery(() => db.achievements.toArray()) || [];
   const cardRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
   if (!profile) return null;
+
+  const week = buildWeeklySummary({
+    studyLog,
+    attempts,
+    unlockedAt: unlocks.map((u) => u.unlockedAt),
+  });
+  const headline = weeklyHeadline(week, profile.streak);
 
   const today = new Date();
   const daysUntilExam = profile.examDate
@@ -107,6 +128,46 @@ export default function ShareCard() {
           </div>
         </div>
 
+        {/* Last 7 days, with week-over-week movement */}
+        <div className="mt-5">
+          <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "#8b97ab" }}>
+            This Week
+          </p>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <p className="text-lg font-bold" style={{ color: "#e6eefc" }}>
+                {week.minutes}m
+              </p>
+              <Delta value={week.minutesDelta} unit="min" />
+            </div>
+            <div>
+              <p className="text-lg font-bold" style={{ color: "#e6eefc" }}>
+                {week.quizzes}
+              </p>
+              <Delta value={week.quizzesDelta} unit="quiz" />
+            </div>
+            <div>
+              <p className="text-lg font-bold" style={{ color: "#e6eefc" }}>
+                {week.cards}
+              </p>
+              <Delta value={week.cardsDelta} unit="cards" />
+            </div>
+          </div>
+          {week.avgScore !== null && (
+            <p className="text-[10px] mt-2 text-center" style={{ color: "#8b97ab" }}>
+              Avg score {week.avgScore}%
+              {week.scoreDelta !== null && (
+                <>
+                  {" · "}
+                  <span style={{ color: week.scoreDelta >= 0 ? "#6ee7b7" : "#f87171" }}>
+                    {week.scoreDelta >= 0 ? "▲" : "▼"} {Math.abs(week.scoreDelta)} pts vs last week
+                  </span>
+                </>
+              )}
+            </p>
+          )}
+        </div>
+
         <div className="mt-5">
           <p className="text-[10px] uppercase tracking-wider mb-2" style={{ color: "#8b97ab" }}>
             Domain Mastery
@@ -131,7 +192,13 @@ export default function ShareCard() {
           </div>
         </div>
 
-        <p className="text-[10px] mt-5 text-right" style={{ color: "#556076" }}>
+        <p
+          className="text-[11px] mt-5 pt-3 italic"
+          style={{ color: "#a78bfa", borderTop: "1px solid #1f2937" }}
+        >
+          {headline}
+        </p>
+        <p className="text-[10px] mt-2 text-right" style={{ color: "#556076" }}>
           {format(today, "MMM d, yyyy")}
         </p>
       </div>

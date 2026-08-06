@@ -1,5 +1,5 @@
 import { format, parseISO } from "date-fns";
-import type { AchievementDef } from "../../data/achievements";
+import { TIER_STYLES, type AchievementDef } from "../../data/achievements";
 
 export default function AchievementCard({
   def,
@@ -17,10 +17,11 @@ export default function AchievementCard({
       ? `Unlocked ${format(parseISO(unlockedAt), "MMM d, yyyy")}`
       : null
     : def.hint;
+  const tier = TIER_STYLES[def.tier];
 
   return (
     <div
-      className={`card p-3 flex items-center gap-3 ${earned ? "border-xp/40" : "opacity-50"}`}
+      className={`card p-3 flex items-center gap-3 ${earned ? `${tier.ring} border` : "opacity-50"}`}
     >
       <span className="text-2xl leading-none shrink-0" aria-hidden="true">
         {def.icon}
@@ -35,11 +36,19 @@ export default function AchievementCard({
           </p>
         )}
       </div>
-      {earned ? (
-        <span className="chip bg-xp/15 text-xp text-[10px] shrink-0">+{def.xp}</span>
-      ) : (
-        <span className="chip bg-panel2 text-dim text-[10px] shrink-0">Locked</span>
-      )}
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <span
+          className={`chip text-[10px] ${tier.bg} ${tier.text}`}
+          title={`${def.tier} difficulty`}
+        >
+          {def.tier}
+        </span>
+        {earned ? (
+          def.xp > 0 && <span className="chip bg-xp/15 text-xp text-[10px]">+{def.xp}</span>
+        ) : (
+          <span className="chip bg-panel2 text-dim text-[10px]">Locked</span>
+        )}
+      </div>
     </div>
   );
 }

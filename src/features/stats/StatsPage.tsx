@@ -112,7 +112,12 @@ export default function StatsPage() {
 
   return (
     <div className="page">
-      <h1 className="text-2xl font-bold mb-6">Your Stats</h1>
+      <div className="flex items-center justify-between gap-2 mb-6">
+        <h1 className="text-2xl font-bold">Your Stats</h1>
+        <Link to="/report" className="btn-ghost text-xs shrink-0">
+          <span aria-hidden="true">📄 </span>Export report
+        </Link>
+      </div>
 
       {!hasAnyData && (
         <EmptyState

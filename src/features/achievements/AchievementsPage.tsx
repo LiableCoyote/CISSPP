@@ -4,6 +4,8 @@ import { db } from "../../db/schema";
 import {
   ACHIEVEMENT_DEFS,
   ACHIEVEMENT_CATEGORIES,
+  TIER_ORDER,
+  TIER_STYLES,
   type AchievementCategory,
 } from "../../data/achievements";
 import AchievementCard from "../../components/gamification/AchievementCard";
@@ -103,6 +105,24 @@ export default function AchievementsPage() {
         <p className="text-xs text-dim mt-2">
           <span className="text-xp font-semibold">{xpEarned} XP</span> earned from achievements ·{" "}
           {xpAvailable - xpEarned} XP still on the table
+        </p>
+
+        {/* Difficulty breakdown */}
+        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
+          {TIER_ORDER.map((tier) => {
+            const defs = ACHIEVEMENT_DEFS.filter((d) => d.tier === tier);
+            const got = defs.filter((d) => unlockedAtById.has(d.id)).length;
+            const s = TIER_STYLES[tier];
+            return (
+              <span key={tier} className={`chip text-[11px] ${s.bg} ${s.text}`}>
+                {tier} {got}/{defs.length}
+              </span>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-dim mt-2">
+          Tiers reflect how hard each badge is to earn — this app is offline and single-user, so
+          they aren't percentages of other people.
         </p>
       </div>
 

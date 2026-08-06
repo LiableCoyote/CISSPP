@@ -149,6 +149,89 @@ export function describeStudyPattern(timeline: TimelineDay[]): string | null {
   return `You study ${consistency}% of days, averaging ${avgMinutes} min per active day. ${best[0]} is your heaviest day.`;
 }
 
+/* ─────────────────────────── Weekly summary ─────────────────────────── */
+
+export type WeeklySummary = {
+  minutes: number;
+  quizzes: number;
+  cards: number;
+  quests: number;
+  activeDays: number;
+  /** Unlocked inside the window. */
+  achievements: number;
+  avgScore: number | null;
+  /** Deltas versus the equivalent window immediately before. */
+  minutesDelta: number;
+  quizzesDelta: number;
+  cardsDelta: number;
+  scoreDelta: number | null;
+};
+
+/**
+ * Activity in the last `days` versus the window before it. XP is deliberately
+ * absent — the profile stores only a running total, so a weekly XP delta would
+ * have to be invented rather than measured.
+ */
+export function buildWeeklySummary(opts: {
+  studyLog: StudyDay[];
+  attempts: QuizAttempt[];
+  unlockedAt: string[];
+  days?: number;
+}): WeeklySummary {
+  const { studyLog, attempts, unlockedAt, days = 7 } = opts;
+  const now = new Date();
+
+  const inWindow = (iso: string, from: number, to: number) => {
+    const age = differenceInCalendarDays(now, parseISO(iso));
+    return age >= to && age < from;
+  };
+
+  const logsIn = (from: number, to: number) =>
+    studyLog.filter((l) => inWindow(`${l.date}T12:00:00`, from, to));
+  const attemptsIn = (from: number, to: number) =>
+    attempts.filter((a) => a.finishedAt && inWindow(a.startedAt, from, to));
+
+  const curLogs = logsIn(days, 0);
+  const prevLogs = logsIn(days * 2, days);
+  const curAttempts = attemptsIn(days, 0);
+  const prevAttempts = attemptsIn(days * 2, days);
+
+  const sum = (rows: StudyDay[], key: keyof StudyDay) =>
+    rows.reduce((s, r) => s + ((r[key] as number) || 0), 0);
+
+  const avg = (rows: QuizAttempt[]) =>
+    rows.length > 0 ? Math.round(rows.reduce((s, a) => s + a.scorePct, 0) / rows.length) : null;
+
+  const avgScore = avg(curAttempts);
+  const prevScore = avg(prevAttempts);
+
+  return {
+    minutes: sum(curLogs, "minutes"),
+    quizzes: curAttempts.length,
+    cards: sum(curLogs, "flashcardsReviewed"),
+    quests: sum(curLogs, "questsCompleted"),
+    activeDays: curLogs.filter((l) => l.minutes > 0).length,
+    achievements: unlockedAt.filter((u) => inWindow(u, days, 0)).length,
+    avgScore,
+    minutesDelta: sum(curLogs, "minutes") - sum(prevLogs, "minutes"),
+    quizzesDelta: curAttempts.length - prevAttempts.length,
+    cardsDelta: sum(curLogs, "flashcardsReviewed") - sum(prevLogs, "flashcardsReviewed"),
+    scoreDelta: avgScore !== null && prevScore !== null ? avgScore - prevScore : null,
+  };
+}
+
+/** One line summarising how the week went, driven by the strongest signal. */
+export function weeklyHeadline(s: WeeklySummary, streak: number): string {
+  if (s.activeDays === 0) return "Quiet week. The best time to restart is today.";
+  if (s.scoreDelta !== null && s.scoreDelta >= 5) return `Scores up ${s.scoreDelta} points this week.`;
+  if (s.scoreDelta !== null && s.scoreDelta <= -5) return "Scores dipped — worth slowing down and reviewing.";
+  if (streak >= 14) return `${streak} days straight. That consistency is the whole game.`;
+  if (s.achievements >= 2) return `${s.achievements} achievements unlocked this week.`;
+  if (s.minutesDelta > 30) return `Up ${s.minutesDelta} minutes over last week.`;
+  if (s.activeDays >= 5) return `${s.activeDays} active days. Steady beats heroic.`;
+  return `${s.activeDays} active day${s.activeDays === 1 ? "" : "s"} this week. Keep chipping.`;
+}
+
 /* ───────────────────────── Fatigue & risk detection ───────────────────────── */
 
 export type StudySignal = {

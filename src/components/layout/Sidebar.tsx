@@ -11,6 +11,7 @@ const ITEMS = [
   { to: "/vault", label: "Vault", icon: "🏛️" },
   { to: "/stats", label: "Stats", icon: "📊" },
   { to: "/achievements", label: "Achievements", icon: "🏅" },
+  { to: "/pace", label: "Pace Board", icon: "🧗" },
   { to: "/resources", label: "Resources", icon: "📚" },
   { to: "/settings", label: "Settings", icon: "⚙️" },
 ];
