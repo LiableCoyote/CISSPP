@@ -17,7 +17,7 @@ export async function exportData() {
     ]);
 
   return {
-    version: 1,
+    version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     profile,
     domains,
@@ -33,40 +33,85 @@ export async function exportData() {
   };
 }
 
-export async function importData(json: string) {
-  const data = JSON.parse(json);
+export const EXPORT_VERSION = 1;
 
-  if (data.version !== 1) {
-    throw new Error("Unsupported export version");
+/** Table names carried in a backup, in the order they are restored. */
+const BACKUP_TABLES = [
+  "profile",
+  "domains",
+  "quests",
+  "flashcards",
+  "questions",
+  "attempts",
+  "answers",
+  "studyLog",
+  "achievements",
+  "notes",
+  "resources",
+] as const;
+
+type BackupTable = (typeof BACKUP_TABLES)[number];
+type Backup = { version: number } & Record<BackupTable, unknown[]>;
+
+/**
+ * Checks a parsed backup before anything touches the database.
+ *
+ * This runs first and throws on anything suspicious, because the restore that
+ * follows is destructive: previously the tables were cleared before the payload
+ * was inspected, so a file containing nothing but `{"version":1}` silently wiped
+ * every record with no way back.
+ */
+export function validateBackup(data: unknown): asserts data is Backup {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    throw new Error("Not a valid backup file — expected a JSON object.");
   }
 
-  // Clear existing data
-  await Promise.all([
-    db.profile.clear(),
-    db.domains.clear(),
-    db.quests.clear(),
-    db.flashcards.clear(),
-    db.questions.clear(),
-    db.attempts.clear(),
-    db.answers.clear(),
-    db.studyLog.clear(),
-    db.achievements.clear(),
-    db.notes.clear(),
-    db.resources.clear(),
-  ]);
+  const obj = data as Record<string, unknown>;
 
-  // Import
-  await Promise.all([
-    db.profile.bulkAdd(data.profile || []),
-    db.domains.bulkAdd(data.domains || []),
-    db.quests.bulkAdd(data.quests || []),
-    db.flashcards.bulkAdd(data.flashcards || []),
-    db.questions.bulkAdd(data.questions || []),
-    db.attempts.bulkAdd(data.attempts || []),
-    db.answers.bulkAdd(data.answers || []),
-    db.studyLog.bulkAdd(data.studyLog || []),
-    db.achievements.bulkAdd(data.achievements || []),
-    db.notes.bulkAdd(data.notes || []),
-    db.resources.bulkAdd(data.resources || []),
-  ]);
+  if (obj.version !== EXPORT_VERSION) {
+    throw new Error(
+      `Unsupported export version ${String(obj.version)} — this app reads version ${EXPORT_VERSION}.`,
+    );
+  }
+
+  for (const table of BACKUP_TABLES) {
+    const value = obj[table];
+    if (value !== undefined && !Array.isArray(value)) {
+      throw new Error(`Backup is malformed: "${table}" should be a list.`);
+    }
+  }
+
+  const totalRows = BACKUP_TABLES.reduce(
+    (sum, table) => sum + (Array.isArray(obj[table]) ? (obj[table] as unknown[]).length : 0),
+    0,
+  );
+  if (totalRows === 0) {
+    throw new Error("Backup is empty — refusing to replace your data with nothing.");
+  }
+}
+
+export async function importData(json: string) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error("That file isn't valid JSON.");
+  }
+
+  validateBackup(parsed);
+  const data = parsed;
+
+  // One transaction over every store: if any write fails, Dexie rolls the
+  // clears back too, so a failed restore leaves the existing data intact.
+  await db.transaction("rw", db.tables, async () => {
+    for (const table of BACKUP_TABLES) {
+      await db.table(table).clear();
+    }
+    for (const table of BACKUP_TABLES) {
+      const rows = data[table];
+      if (Array.isArray(rows) && rows.length > 0) {
+        await db.table(table).bulkAdd(rows);
+      }
+    }
+  });
 }

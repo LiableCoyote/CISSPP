@@ -1,4 +1,4 @@
-import { useEffect, Suspense, lazy } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { initializeDb } from "./db/seed";
 import { useProfile } from "./state/profile";
@@ -36,13 +36,44 @@ function LoadingScreen() {
   );
 }
 
+function StartupError({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="card max-w-md text-center">
+        <p className="text-4xl mb-2" aria-hidden="true">
+          🗄️
+        </p>
+        <h2 className="text-xl font-bold mb-2">Couldn't open your study data</h2>
+        <p className="text-sm text-dim mb-4">{message}</p>
+        <p className="text-xs text-dim mb-4">
+          This usually means the database is open in another tab, or the browser is blocking
+          storage for this site. Close other tabs and reload. Your data has not been changed.
+        </p>
+        <button onClick={() => window.location.reload()} className="btn-primary w-full">
+          Reload App
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const { initProfile, loading } = useProfile();
+  const [startupError, setStartupError] = useState<string | null>(null);
 
   useEffect(() => {
-    initializeDb().then(() => initProfile());
+    // Without a catch here a rejected init leaves `loading` true forever, and the
+    // user sits on the spinner with no error and no way out — ErrorBoundary never
+    // sees a rejected promise.
+    initializeDb()
+      .then(() => initProfile())
+      .catch((err: unknown) => {
+        console.error("Startup failed:", err);
+        setStartupError(err instanceof Error ? err.message : "Unknown error");
+      });
   }, []); // eslint-disable-line
 
+  if (startupError) return <StartupError message={startupError} />;
   if (loading) return <LoadingScreen />;
 
   return (

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useProfile } from "../../state/profile";
 import { db } from "../../db/schema";
 import { exportData, importData } from "../../lib/export";
+import { downloadJSON } from "../../lib/download";
 import { getWeekKey } from "../../lib/streak";
 import ProfileSwitcher from "../../components/ProfileSwitcher";
 
@@ -54,14 +55,14 @@ export default function SettingsPage() {
   };
 
   const doExport = async () => {
-    const data = await exportData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `cisspp-backup-${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const data = await exportData();
+      downloadJSON(data, `cisspp-backup-${new Date().toISOString().split("T")[0]}.json`);
+      setImportStatus("✓ Backup downloaded.");
+      setTimeout(() => setImportStatus(null), 3000);
+    } catch (err) {
+      setImportStatus(`✗ Export failed: ${err instanceof Error ? err.message : "unknown"}`);
+    }
   };
 
   const doImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,14 +100,19 @@ export default function SettingsPage() {
       setResetConfirm(true);
       return;
     }
-    const data = await exportData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `cisspp-pre-reset-backup-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    // Never delete without a backup in hand — if the export fails, stop.
+    try {
+      const data = await exportData();
+      downloadJSON(data, `cisspp-pre-reset-backup-${Date.now()}.json`);
+    } catch (err) {
+      setResetConfirm(false);
+      setImportStatus(
+        `✗ Reset cancelled — couldn't save a backup first (${
+          err instanceof Error ? err.message : "unknown"
+        }). Nothing was deleted.`,
+      );
+      return;
+    }
     await db.delete();
     window.location.reload();
   };

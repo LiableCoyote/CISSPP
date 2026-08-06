@@ -61,7 +61,10 @@ export default function ShareCard() {
       const link = document.createElement("a");
       link.download = `cisspp-progress-${format(today, "yyyy-MM-dd")}.png`;
       link.href = dataUrl;
+      link.style.display = "none";
+      document.body.appendChild(link);
       link.click();
+      link.remove();
       pushToast({ variant: "success", icon: "📸", title: "Share card saved", durationMs: 2500 });
     } catch (err) {
       console.error(err);

@@ -1,4 +1,5 @@
 import Dexie, { type Table } from "dexie";
+import { getItem } from "../lib/safeStorage";
 
 export type DomainId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type Priority = "HIGH" | "Medium";
@@ -130,8 +131,10 @@ export interface ResourceState {
   updatedAt: string;
 }
 
-// Resolved once at module load — switching profiles requires a page reload
-const _activeSlot = localStorage.getItem("cisspp-active-slot") || "default";
+// Resolved once at module load — switching profiles requires a page reload.
+// Must not throw: this runs before React mounts, so an unguarded storage error
+// would leave a blank page that ErrorBoundary can never catch.
+const _activeSlot = getItem("cisspp-active-slot") || "default";
 
 class CissppDb extends Dexie {
   profile!: Table<Profile, 1>;

@@ -30,8 +30,14 @@ export const useProfile = create<ProfileStore>((set, get) => ({
   profile: null,
   loading: true,
   initProfile: async () => {
-    const p = await db.profile.get(1);
-    set({ profile: p || null, loading: false });
+    // `loading` gates the whole app, so it must be cleared on every path —
+    // otherwise a read failure pins the user on the loading screen.
+    try {
+      const p = await db.profile.get(1);
+      set({ profile: p || null });
+    } finally {
+      set({ loading: false });
+    }
   },
   updateProfile: async (updates) => {
     const prev = get().profile;
