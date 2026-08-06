@@ -68,7 +68,9 @@ export default function DashboardPage() {
 
   // Next boss
   const bossWeeks = [4, 6, 7];
-  const nextBoss = bossWeeks.find((w) => w > currentWeek) || null;
+  // >= not >: during week 4 itself the week-4 boss is still ahead of you, and
+  // advertising week 6 skips the one you're meant to be preparing for.
+  const nextBoss = bossWeeks.find((w) => w >= currentWeek) || null;
 
   // Mindset prompt of the day
   const promptIdx = daysSinceStart % MINDSET_PROMPTS.length;
@@ -130,7 +132,7 @@ export default function DashboardPage() {
           />
         </div>
         <p className="text-xs text-dim mt-1 text-right">
-          {xpInLevel} / {xpRange} to next level
+          {xpRange > 0 ? `${xpInLevel} / ${xpRange} to next level` : "Max level reached"}
         </p>
       </div>
 

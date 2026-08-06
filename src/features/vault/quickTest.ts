@@ -19,9 +19,17 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-/** Wraps `answer` in up to 3 distractors drawn from the same sequence. */
-function buildOptions(answer: string, pool: string[]): { options: string[]; answerIndex: number } {
-  const distractors = shuffle(pool.filter((x) => x !== answer)).slice(0, 3);
+const OPTION_COUNT = 4;
+
+/**
+ * Wraps `answer` in distractors so every question offers OPTION_COUNT choices.
+ *
+ * Distractors always come from the full sequence, never a pre-filtered pool —
+ * passing a reduced pool used to yield 3 options on "what comes after X" while
+ * "what comes first" offered 4, which telegraphs the question type.
+ */
+function buildOptions(answer: string, order: string[]): { options: string[]; answerIndex: number } {
+  const distractors = shuffle(order.filter((x) => x !== answer)).slice(0, OPTION_COUNT - 1);
   const options = shuffle([answer, ...distractors]);
   return { options, answerIndex: options.indexOf(answer) };
 }
@@ -62,7 +70,7 @@ export function buildQuickTest(game: OrderGameDef, count = 5): QuickTestQuestion
     candidates.push({
       id: `${game.id}-after-${i}`,
       prompt: `Which comes immediately AFTER "${order[i]}"?`,
-      ...buildOptions(order[i + 1], order.filter((x) => x !== order[i])),
+      ...buildOptions(order[i + 1], order),
       explain: `${order[i]} (step ${i + 1}) is followed by ${order[i + 1]} (step ${i + 2}).`,
     });
   }
@@ -71,12 +79,14 @@ export function buildQuickTest(game: OrderGameDef, count = 5): QuickTestQuestion
     candidates.push({
       id: `${game.id}-before-${i}`,
       prompt: `Which comes immediately BEFORE "${order[i]}"?`,
-      ...buildOptions(order[i - 1], order.filter((x) => x !== order[i])),
+      ...buildOptions(order[i - 1], order),
       explain: `${order[i]} (step ${i + 1}) is preceded by ${order[i - 1]} (step ${i}).`,
     });
   }
 
-  for (let i = 0; i < n; i++) {
+  // Interior positions only: "which step is 1st" and "which step is last" are
+  // the -first and -last questions reworded, with the same answer.
+  for (let i = 1; i < n - 1; i++) {
     candidates.push({
       id: `${game.id}-pos-${i}`,
       prompt: `Which step is ${ordinal(i + 1)} in ${game.title}?`,
@@ -85,21 +95,33 @@ export function buildQuickTest(game: OrderGameDef, count = 5): QuickTestQuestion
     });
   }
 
-  // Spread picks across question types rather than taking a run of "after" items.
+  // A set can hold at most one question per step, since two questions sharing a
+  // correct answer read as a repeat however differently they're worded.
+  const target = Math.min(count, n);
+
+  const answerOf = (q: QuickTestQuestion) => q.options[q.answerIndex];
+  const kindOf = (q: QuickTestQuestion) => q.id.replace(/-\d+$/, "");
+
   const picked: QuickTestQuestion[] = [];
-  const seenKinds = new Set<string>();
+  const usedAnswers = new Set<string>();
+  const usedKinds = new Set<string>();
+
+  // First pass prefers an unseen question type, so a set isn't all "after".
   for (const q of shuffle(candidates)) {
-    const kind = q.id.replace(/-\d+$/, "");
-    if (picked.length >= count) break;
-    if (seenKinds.has(kind) && picked.length < count - 1) continue;
-    seenKinds.add(kind);
+    if (picked.length >= target) break;
+    if (usedAnswers.has(answerOf(q))) continue;
+    if (usedKinds.has(kindOf(q))) continue;
+    usedAnswers.add(answerOf(q));
+    usedKinds.add(kindOf(q));
     picked.push(q);
   }
-  // Top up if the variety filter left us short on a small sequence.
+  // Second pass fills the remainder, still refusing a repeated answer.
   for (const q of shuffle(candidates)) {
-    if (picked.length >= count) break;
-    if (!picked.some((p) => p.id === q.id)) picked.push(q);
+    if (picked.length >= target) break;
+    if (usedAnswers.has(answerOf(q))) continue;
+    usedAnswers.add(answerOf(q));
+    picked.push(q);
   }
 
-  return picked.slice(0, count);
+  return picked;
 }

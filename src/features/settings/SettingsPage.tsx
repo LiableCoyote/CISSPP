@@ -3,6 +3,7 @@ import { useProfile } from "../../state/profile";
 import { db } from "../../db/schema";
 import { exportData, importData } from "../../lib/export";
 import { downloadJSON } from "../../lib/download";
+import { getItem, setItem, removeItem } from "../../lib/safeStorage";
 import { getWeekKey } from "../../lib/streak";
 import ProfileSwitcher from "../../components/ProfileSwitcher";
 
@@ -12,10 +13,10 @@ export default function SettingsPage() {
   const [examDate, setExamDate] = useState(profile?.examDate || "");
   const [dailyGoal, setDailyGoal] = useState(profile?.dailyGoalMinutes || 120);
   const [reminderEnabled, setReminderEnabled] = useState(() => {
-    return localStorage.getItem("cisspp-reminder-enabled") === "1";
+    return getItem("cisspp-reminder-enabled") === "1";
   });
   const [reminderTime, setReminderTime] = useState(() => {
-    return localStorage.getItem("cisspp-reminder-time") || "18:00";
+    return getItem("cisspp-reminder-time") || "18:00";
   });
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [resetConfirm, setResetConfirm] = useState(false);
@@ -37,8 +38,8 @@ export default function SettingsPage() {
       if ("Notification" in window) {
         const perm = await Notification.requestPermission();
         if (perm === "granted") {
-          localStorage.setItem("cisspp-reminder-enabled", "1");
-          localStorage.setItem("cisspp-reminder-time", reminderTime);
+          setItem("cisspp-reminder-enabled", "1");
+          setItem("cisspp-reminder-time", reminderTime);
           setReminderEnabled(true);
           new Notification("CISSPP Reminders Enabled", {
             body: `You'll be reminded at ${reminderTime} daily.`,
@@ -49,7 +50,7 @@ export default function SettingsPage() {
         }
       }
     } else {
-      localStorage.removeItem("cisspp-reminder-enabled");
+      removeItem("cisspp-reminder-enabled");
       setReminderEnabled(false);
     }
   };
@@ -206,7 +207,7 @@ export default function SettingsPage() {
             value={reminderTime}
             onChange={(e) => {
               setReminderTime(e.target.value);
-              localStorage.setItem("cisspp-reminder-time", e.target.value);
+              setItem("cisspp-reminder-time", e.target.value);
             }}
             className="input !w-auto"
             disabled={!reminderEnabled}

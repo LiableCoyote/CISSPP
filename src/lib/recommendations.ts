@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import type { Profile, Quest, QuizAttempt } from "../db/schema";
 import { DOMAINS } from "../data/domains";
 import type { DomainVelocity } from "./analytics";
@@ -146,8 +146,13 @@ export function buildRecommendations(input: RecommendationInput): Recommendation
     });
   }
 
-  // Untouched domains — coverage gaps hide until exam day.
-  const untouched = DOMAINS.filter((d) => !finished.some((a) => a.domainId === d.id));
+  // Untouched domains — coverage gaps hide until exam day. A full-length exam
+  // covers every domain but stores domainId: null, so checking domainId alone
+  // told users who had sat three full exams that they'd never tested anything.
+  const tookFullExam = finished.some((a) => a.mode === "full");
+  const untouched = tookFullExam
+    ? []
+    : DOMAINS.filter((d) => !finished.some((a) => a.domainId === d.id));
   if (untouched.length > 0 && finished.length >= 3) {
     const next = untouched[0];
     recs.push({
@@ -173,11 +178,4 @@ export function buildRecommendations(input: RecommendationInput): Recommendation
   });
 
   return recs.sort((a, b) => b.priority - a.priority);
-}
-
-/** Days since the profile last logged activity, or null if never. */
-export function daysSinceActive(profile: Profile): number | null {
-  if (!profile.lastActiveDate) return null;
-  const last = parseISO(profile.lastActiveDate);
-  return Math.floor((Date.now() - last.getTime()) / 86_400_000);
 }

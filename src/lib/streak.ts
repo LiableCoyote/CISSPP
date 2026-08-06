@@ -1,4 +1,4 @@
-import { format, isYesterday, parseISO } from "date-fns";
+import { format, isYesterday, parseISO, getISOWeek, getISOWeekYear } from "date-fns";
 
 export function updateStreak(lastActiveDate: string | null, currentDate: Date): {
   streak: number;
@@ -28,14 +28,14 @@ export function updateStreak(lastActiveDate: string | null, currentDate: Date): 
   return { streak: 1, longestStreak: 0, reset: true };
 }
 
+/**
+ * ISO week key, e.g. "2025-W17".
+ *
+ * The previous implementation divided the day-of-month by 7, producing a
+ * week-of-month: 3 January and 5 February both returned "W01", so the weekly
+ * streak-freeze allowance reset unpredictably.
+ */
 export function getWeekKey(date: Date): string {
-  // Return ISO week key: "2025-W17"
-  const iso = date.toISOString().slice(0, 10);
-  const d = new Date(iso);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const weekStart = new Date(d.setDate(diff));
-  const weekNum = String(Math.ceil(weekStart.getDate() / 7)).padStart(2, "0");
-  const year = weekStart.getFullYear();
-  return `${year}-W${weekNum}`;
+  const week = String(getISOWeek(date)).padStart(2, "0");
+  return `${getISOWeekYear(date)}-W${week}`;
 }

@@ -254,11 +254,13 @@ const BACKLOG_CARDS = 40;
 const DOMAIN_CRAM_ATTEMPTS = 6;
 const HOARD_SHARE = 0.6;
 
-/** Counts attempts per domain within the last `days`. */
+/** Counts completed attempts per domain within the last `days`. */
 function attemptsByDomain(attempts: QuizAttempt[], days: number): Map<DomainId, number> {
   const now = new Date();
   const counts = new Map<DomainId, number>();
   for (const a of attempts) {
+    // Abandoned attempts aren't study — every other consumer filters on this.
+    if (!a.finishedAt) continue;
     if (a.domainId === null) continue;
     if (differenceInCalendarDays(now, parseISO(a.startedAt)) > days) continue;
     counts.set(a.domainId, (counts.get(a.domainId) || 0) + 1);
@@ -340,9 +342,14 @@ export function detectStudySignals(opts: {
 
   // Marathon drilling one domain — beats spaced repetition into the ground.
   const cram2d = attemptsByDomain(attempts, 2);
-  const crammedDomain = [...cram2d.entries()].sort((a, b) => b[1] - a[1])[0];
-  if (crammedDomain && crammedDomain[1] >= DOMAIN_CRAM_ATTEMPTS) {
-    const [domainId, count] = crammedDomain;
+  const topRecent = [...cram2d.entries()].sort((a, b) => b[1] - a[1])[0];
+  // Only set once the threshold is actually met. Previously this held the
+  // most-attempted domain regardless, and the hoard check below de-duplicated
+  // against it — so a single recent quiz suppressed the hoard banner entirely.
+  const crammedDomainId =
+    topRecent && topRecent[1] >= DOMAIN_CRAM_ATTEMPTS ? topRecent[0] : null;
+  if (topRecent && crammedDomainId !== null) {
+    const [domainId, count] = topRecent;
     signals.push({
       id: "domain-cram",
       severity: "warn",
@@ -362,7 +369,7 @@ export function detectStudySignals(opts: {
     topDomain &&
     weekTotal >= 3 &&
     topDomain[1] / weekTotal > HOARD_SHARE &&
-    topDomain[0] !== crammedDomain?.[0]
+    topDomain[0] !== crammedDomainId
   ) {
     const share = Math.round((topDomain[1] / weekTotal) * 100);
     signals.push({

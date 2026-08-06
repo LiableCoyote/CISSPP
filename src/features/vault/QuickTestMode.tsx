@@ -4,6 +4,8 @@ import type { OrderGameDef } from "../../data/vault";
 import { buildQuickTest, QUICK_TEST_SECONDS, type QuickTestQuestion } from "./quickTest";
 import { checkAchievements } from "../achievements/engine";
 import { pushToast } from "../../state/toast";
+import { useProfile } from "../../state/profile";
+import { logStudySession } from "../../lib/session";
 
 const QUESTION_COUNT = 5;
 
@@ -25,6 +27,8 @@ export default function QuickTestMode({
   const [secondsLeft, setSecondsLeft] = useState(QUICK_TEST_SECONDS);
   const [done, setDone] = useState(false);
   const reportedRef = useRef(false);
+  const updateProfile = useProfile((s) => s.updateProfile);
+  const refreshProfile = useProfile((s) => s.refreshProfile);
 
   const q = questions[index];
   const answered = picked !== null;
@@ -54,7 +58,27 @@ export default function QuickTestMode({
   useEffect(() => {
     if (!done || reportedRef.current) return;
     reportedRef.current = true;
-    checkAchievements({ kind: "vault-quick-test", tableId: game.id, scorePct });
+
+    void (async () => {
+      try {
+        // Vault work is study: without this it never reached studyLog, so it
+        // didn't count toward the streak, the heatmap or any of the signals.
+        const p = useProfile.getState().profile;
+        if (p) {
+          const xpGain = 10 + Math.round(scorePct / 10);
+          const patch = await logStudySession(p, { minutes: Math.max(1, questions.length / 2) });
+          await updateProfile({ xp: p.xp + xpGain, ...patch });
+        }
+        await checkAchievements({ kind: "vault-quick-test", tableId: game.id, scorePct });
+      } catch (err) {
+        console.error("Logging vault quick test failed", err);
+      } finally {
+        // Achievement XP is written straight to Dexie by the engine, so without
+        // this the store stays stale and the dashboard shows the old total.
+        await refreshProfile();
+      }
+    })();
+
     pushToast({
       variant: scorePct === 100 ? "success" : scorePct >= 60 ? "info" : "warn",
       icon: scorePct === 100 ? "🏛️" : scorePct >= 60 ? "✅" : "📖",
@@ -64,7 +88,7 @@ export default function QuickTestMode({
           ? "Perfect recall. That sequence is locked in."
           : `${correctCount} of ${questions.length} correct. Re-drag the order, then retest.`,
     });
-  }, [done, scorePct, correctCount, questions.length, game.id, game.title]);
+  }, [done, scorePct, correctCount, questions.length, game.id, game.title, updateProfile, refreshProfile]);
 
   const pick = (i: number) => {
     if (answered) return;

@@ -39,8 +39,13 @@ export default function NextUp({
   // Dismissals live for the session only — a real problem should resurface later.
   const [dismissed, setDismissed] = useState<string[]>(loadDismissed);
 
-  const flashcards = useLiveQuery(() => db.flashcards.toArray()) || [];
-  const studyLog = useLiveQuery(() => db.studyLog.toArray()) || [];
+  const flashcards = useLiveQuery(() => db.flashcards.toArray());
+  const studyLog = useLiveQuery(() => db.studyLog.toArray());
+
+  // Only the top two recommendations render, and the list is priority-sorted, so
+  // defaulting to [] made both visible links change identity once Dexie resolved
+  // — a tap target that moves under the user's finger on mobile.
+  if (!flashcards || !studyLog) return null;
 
   const now = new Date();
   const dueCards = flashcards.filter((c) => parseISO(c.dueAt) <= now).length;

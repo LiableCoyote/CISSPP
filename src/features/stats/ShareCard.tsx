@@ -22,13 +22,16 @@ function Delta({ value, unit }: { value: number; unit: string }) {
 
 export default function ShareCard() {
   const { profile } = useProfile();
-  const attempts = useLiveQuery(() => db.attempts.toArray()) || [];
-  const studyLog = useLiveQuery(() => db.studyLog.toArray()) || [];
-  const unlocks = useLiveQuery(() => db.achievements.toArray()) || [];
+  const attempts = useLiveQuery(() => db.attempts.toArray());
+  const studyLog = useLiveQuery(() => db.studyLog.toArray());
+  const unlocks = useLiveQuery(() => db.achievements.toArray());
   const cardRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
-  if (!profile) return null;
+  // Hold the render until Dexie resolves. Defaulting these to [] rendered a card
+  // reading "Quiet week" with every bar at 0%, and the export button was live —
+  // one quick click produced a PNG that misstated the user's actual progress.
+  if (!profile || !attempts || !studyLog || !unlocks) return null;
 
   const week = buildWeeklySummary({
     studyLog,

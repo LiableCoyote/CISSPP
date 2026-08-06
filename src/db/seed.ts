@@ -4,6 +4,7 @@ import { QUEST_SEEDS } from "../data/weeks";
 import { buildFlashcardSeed } from "../data/flashcards.seed";
 import { ALL_QUESTIONS } from "../data/questions.seed";
 import { RESOURCES } from "../data/resources";
+import { getWeekKey } from "../lib/streak";
 import type { Profile, Quest } from "./schema";
 
 /**
@@ -46,14 +47,14 @@ export async function initializeDb() {
   }
 
   const now = new Date().toISOString();
-  const sevenWeeksLater = new Date();
-  sevenWeeksLater.setDate(sevenWeeksLater.getDate() + 56);
+  const examDateDefault = new Date();
+  examDateDefault.setDate(examDateDefault.getDate() + 56);
 
   // Create profile
   const profile: Profile = {
     id: 1,
     displayName: "Scholar",
-    examDate: sevenWeeksLater.toISOString().split("T")[0],
+    examDate: examDateDefault.toISOString().split("T")[0],
     dailyGoalMinutes: 120,
     startDate: now,
     xp: 0,
@@ -61,7 +62,7 @@ export async function initializeDb() {
     streak: 0,
     longestStreak: 0,
     streakFreezesUsedThisWeek: 0,
-    streakWeekKey: new Date().getFullYear() + "-W" + Math.ceil(new Date().getDate() / 7).toString().padStart(2, "0"),
+    streakWeekKey: getWeekKey(new Date()),
     lastActiveDate: null,
     mindsetChoicesCorrect: 0,
     technicianMisses: 0,
@@ -88,9 +89,6 @@ export async function initializeDb() {
 
   // Seed questions
   await db.questions.bulkAdd(ALL_QUESTIONS);
-
-  // Seed achievements (empty state; unlock as earned)
-  await db.achievements.bulkAdd([]);
 
   // Seed resources (watched state)
   const resourceStates = RESOURCES.map(r => ({

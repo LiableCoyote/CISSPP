@@ -78,6 +78,7 @@ export default function VaultPage() {
           <div className="mb-8">
             <OrderGame
               key={activeGame.id}
+              gameId={activeGame.id}
               title={activeGame.title}
               hint={activeGame.hint}
               canonicalOrder={activeGame.order}

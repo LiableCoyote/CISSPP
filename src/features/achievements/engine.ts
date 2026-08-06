@@ -9,7 +9,8 @@ export type AchievementEvent =
   | { kind: "flashcard-review"; reviewedToday: number; totalDeck: number }
   | { kind: "level-up"; previousLevel: number; newLevel: number }
   | { kind: "streak"; streak: number }
-  | { kind: "vault-quick-test"; tableId: string; scorePct: number };
+  | { kind: "vault-quick-test"; tableId: string; scorePct: number }
+  | { kind: "vault-order-win"; gameId: string };
 
 const DEF_BY_ID = new Map(ACHIEVEMENT_DEFS.map((d) => [d.id, d]));
 
@@ -19,7 +20,11 @@ async function alreadyUnlocked(id: string): Promise<boolean> {
 
 async function unlock(def: AchievementDef) {
   const now = new Date().toISOString();
-  await db.achievements.add({ id: def.id, unlockedAt: now });
+  // put() rather than add(): alreadyUnlocked() is a check-then-act with an await
+  // in between, and QuizReviewPage fires three overlapping unawaited check
+  // chains, so two can pass the check and the second add() would throw
+  // ConstraintError — aborting the rest of that batch.
+  await db.achievements.put({ id: def.id, unlockedAt: now });
   if (def.xp > 0) {
     const p = await db.profile.get(1);
     if (p) await db.profile.update(1, { xp: p.xp + def.xp });
@@ -125,35 +130,94 @@ async function checkVaultQuickTest(scorePct: number) {
   if (scorePct >= 100) await tryUnlock("vault-quiz-perfect");
 }
 
-export async function checkAchievements(event: AchievementEvent): Promise<void> {
+const BIA_WINS_REQUIRED = 5;
+
+/** "Correctly order BCP steps 5 times" — counted in the vaultWins store. */
+async function checkVaultOrderWin(gameId: string) {
+  if (gameId !== "bcp-steps") return;
+  const row = await db.vaultWins.get(gameId);
+  if ((row?.wins ?? 0) >= BIA_WINS_REQUIRED) await tryUnlock("bia-first");
+}
+
+const GAP_WEAK_PCT = 60;
+const GAP_RECOVERED_PCT = 70;
+
+/**
+ * "Raise a weak domain from <60% to 70%+".
+ *
+ * Uses the same running average the Stats page shows, so the badge fires on the
+ * number the user can actually see: the domain must have averaged below 60% at
+ * some earlier point and be at 70%+ now.
+ */
+async function checkGapCloser(attemptId: string) {
+  const attempt = await db.attempts.get(attemptId);
+  if (!attempt || attempt.domainId === null) return;
+
+  const domainAttempts = (await db.attempts.where("mode").equals("domain").toArray())
+    .filter((a) => a.finishedAt && a.domainId === attempt.domainId)
+    .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+
+  if (domainAttempts.length < 2) return;
+
+  const avgOfFirst = (count: number) =>
+    Math.round(
+      domainAttempts.slice(0, count).reduce((s, a) => s + a.scorePct, 0) / count,
+    );
+
+  const current = avgOfFirst(domainAttempts.length);
+  if (current < GAP_RECOVERED_PCT) return;
+
+  // Was the running average ever under the weak line before now?
+  const wasWeak = domainAttempts
+    .slice(0, -1)
+    .some((_, i) => avgOfFirst(i + 1) < GAP_WEAK_PCT);
+  if (wasWeak) await tryUnlock("gap-closer");
+}
+
+/**
+ * Runs one check in isolation. A single wrapping try/catch around the whole
+ * switch meant that if an early check threw, every later check for that event
+ * was skipped permanently — nothing re-runs them.
+ */
+async function run(label: string, fn: () => Promise<void>): Promise<void> {
   try {
-    switch (event.kind) {
-      case "quest-complete":
-        await checkDayOneQuests();
-        await checkWeekClear(event.week);
-        break;
-      case "quiz-complete":
-        await checkFirstBlood();
-        await checkMindsetAchievements();
-        await checkNoTechnicianOnAttempt(event.attemptId);
-        await checkDomainMastery(event.attemptId);
-        await checkBossFights(event.attemptId);
-        break;
-      case "flashcard-review":
-        await checkFlashcardCounts(event.reviewedToday, event.totalDeck);
-        break;
-      case "level-up":
-        await checkLevels(event.newLevel);
-        break;
-      case "streak":
-        await checkStreak(event.streak);
-        break;
-      case "vault-quick-test":
-        await checkVaultQuickTest(event.scorePct);
-        break;
-    }
+    await fn();
   } catch (err) {
-    console.error("Achievement check failed", err);
+    console.error(`Achievement check "${label}" failed`, err);
+  }
+}
+
+export async function checkAchievements(event: AchievementEvent): Promise<void> {
+  switch (event.kind) {
+    case "quest-complete":
+      await run("day-one-quests", () => checkDayOneQuests());
+      await run("week-clear", () => checkWeekClear(event.week));
+      break;
+    case "quiz-complete":
+      await run("first-blood", () => checkFirstBlood());
+      await run("mindset", () => checkMindsetAchievements());
+      await run("no-technician", () => checkNoTechnicianOnAttempt(event.attemptId));
+      await run("domain-mastery", () => checkDomainMastery(event.attemptId));
+      await run("gap-closer", () => checkGapCloser(event.attemptId));
+      await run("boss-fights", () => checkBossFights(event.attemptId));
+      break;
+    case "flashcard-review":
+      await run("flashcard-counts", () =>
+        checkFlashcardCounts(event.reviewedToday, event.totalDeck),
+      );
+      break;
+    case "level-up":
+      await run("levels", () => checkLevels(event.newLevel));
+      break;
+    case "streak":
+      await run("streak", () => checkStreak(event.streak));
+      break;
+    case "vault-quick-test":
+      await run("vault-quick-test", () => checkVaultQuickTest(event.scorePct));
+      break;
+    case "vault-order-win":
+      await run("vault-order-win", () => checkVaultOrderWin(event.gameId));
+      break;
   }
 }
 

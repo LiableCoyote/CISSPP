@@ -131,6 +131,13 @@ export interface ResourceState {
   updatedAt: string;
 }
 
+/** Correct completions of a Vault order mini-game, keyed by game id. */
+export interface VaultWin {
+  gameId: string;
+  wins: number;
+  lastWonAt: string;
+}
+
 // Resolved once at module load — switching profiles requires a page reload.
 // Must not throw: this runs before React mounts, so an unguarded storage error
 // would leave a blank page that ErrorBoundary can never catch.
@@ -148,6 +155,7 @@ class CissppDb extends Dexie {
   achievements!: Table<Achievement, string>;
   notes!: Table<AppNote, string>;
   resources!: Table<ResourceState, string>;
+  vaultWins!: Table<VaultWin, string>;
 
   constructor() {
     super("cisspp-" + _activeSlot);
@@ -174,6 +182,11 @@ class CissppDb extends Dexie {
           if (a.confidence === undefined) a.confidence = null;
         });
       });
+    // v3: adds vaultWins, which backs the "order the BCP steps 5 times"
+    // achievement. New store only — no data migration needed.
+    this.version(3).stores({
+      vaultWins: "gameId",
+    });
   }
 }
 

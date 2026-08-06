@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { Reorder } from "framer-motion";
+import { db } from "../../db/schema";
+import { checkAchievements } from "../achievements/engine";
 
 interface Props {
+  /** Stable id of the sequence, used to record wins. */
+  gameId: string;
   title: string;
   canonicalOrder: string[];
   hint?: string;
@@ -18,7 +22,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export default function OrderGame({ title, canonicalOrder, hint, onQuickTest }: Props) {
+export default function OrderGame({ gameId, title, canonicalOrder, hint, onQuickTest }: Props) {
   const [items, setItems] = useState<string[]>(() => shuffle(canonicalOrder));
   const [checked, setChecked] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -26,10 +30,24 @@ export default function OrderGame({ title, canonicalOrder, hint, onQuickTest }: 
   const correct = items.every((it, i) => it === canonicalOrder[i]);
 
   useEffect(() => {
-    if (checked && correct) {
-      if ("vibrate" in navigator) navigator.vibrate([10, 50, 10, 50, 30]);
-    }
-  }, [checked, correct]);
+    if (!checked || !correct) return;
+    if ("vibrate" in navigator) navigator.vibrate([10, 50, 10, 50, 30]);
+
+    // Record the win so streak-style achievements can count it.
+    void (async () => {
+      try {
+        const existing = await db.vaultWins.get(gameId);
+        await db.vaultWins.put({
+          gameId,
+          wins: (existing?.wins ?? 0) + 1,
+          lastWonAt: new Date().toISOString(),
+        });
+        await checkAchievements({ kind: "vault-order-win", gameId });
+      } catch (err) {
+        console.error("Recording vault win failed", err);
+      }
+    })();
+  }, [checked, correct, gameId]);
 
   const moveItem = (idx: number, direction: -1 | 1) => {
     const newIdx = idx + direction;

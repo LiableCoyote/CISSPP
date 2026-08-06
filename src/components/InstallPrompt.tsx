@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getItem, setItem } from "../lib/safeStorage";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -10,7 +11,7 @@ const STORAGE_KEY = "cisspp-install-dismissed";
 export default function InstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(() => {
-    return localStorage.getItem(STORAGE_KEY) === "1";
+    return getItem(STORAGE_KEY) === "1";
   });
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export default function InstallPrompt() {
   };
 
   const skip = () => {
-    localStorage.setItem(STORAGE_KEY, "1");
+    setItem(STORAGE_KEY, "1");
     setDismissed(true);
   };
 
