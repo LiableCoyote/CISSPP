@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "qa": "node scripts/qa-routes.mjs && node scripts/qa-a11y.mjs",
+    "qa:firefox": "node scripts/qa-routes.mjs --browser=firefox && node scripts/qa-a11y.mjs --browser=firefox",
     "preview": "vite preview"
   },
   "dependencies": {

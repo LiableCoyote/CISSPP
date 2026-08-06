@@ -69,19 +69,41 @@ New seed content added in an update is backfilled into an existing database by i
 ## Verification
 
 ```bash
-npm run lint          # ESLint
+npm run lint          # ESLint — expected: 0 problems
 npx tsc --noEmit      # types
+npm test              # Vitest unit suite
 npm run build         # production build
 ```
 
-The Week 4 QA pass used headless Chromium against `npm run preview`:
+### Browser QA
 
-- All 12 routes checked at 375 / 768 / 1440 px for horizontal overflow, blank renders and console errors
-- axe-core WCAG 2.1 A/AA scan on every route
-- Service-worker registration and an offline reload
+The sweeps need a server running first:
 
-Firefox and WebKit were not tested — those engines could not be installed in the
-build environment.
+```bash
+npm run build
+npx vite preview --port 4173 --strictPort &
+
+npm run qa            # Chromium: routes + accessibility
+npm run qa:firefox    # same, in Firefox
+```
+
+- `scripts/qa-routes.mjs` — every route at 375 / 768 / 1440 px, failing on
+  horizontal overflow, a blank render, or a console error
+- `scripts/qa-a11y.mjs` — axe-core WCAG 2.1 A/AA scan on every route
+
+Both accept `--browser=chromium|firefox`. Point them elsewhere with
+`QA_BASE_URL`. Avoid ports on the [WHATWG bad-port list](https://fetch.spec.whatwg.org/#port-blocking)
+— 4190 and similar are refused by browsers outright and look like an app hang.
+
+**Verified in Chromium 141 and Firefox 153**: 36 route/viewport combinations
+clean, zero axe violations. WebKit is skipped with a message — its host
+libraries are not installable in this environment.
+
+### Tests
+
+`npm test` covers the pure logic: export/import (including every rejection
+path), analytics and signals, recommendations, quick-test generation, SM-2, and
+ISO week keys. No jsdom, no component tests — Dexie runs on `fake-indexeddb`.
 
 ## Keyboard shortcuts
 
