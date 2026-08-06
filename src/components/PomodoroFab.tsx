@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { db } from "../db/schema";
 import { format } from "date-fns";
 
@@ -6,6 +6,20 @@ type Phase = "idle" | "focus" | "break";
 
 const FOCUS_SECONDS = 25 * 60;
 const BREAK_SECONDS = 5 * 60;
+
+/**
+ * `new Notification()` throws a TypeError on Android Chrome, where notifications
+ * must go through the service worker registration. Never let that break the timer.
+ */
+function notify(title: string, body: string) {
+  try {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body, icon: "/icons/icon-192.png" });
+    }
+  } catch (err) {
+    console.warn("Notification failed:", err);
+  }
+}
 
 export default function PomodoroFab() {
   const [open, setOpen] = useState(false);
@@ -15,20 +29,53 @@ export default function PomodoroFab() {
   const dialogRef = useRef<HTMLDivElement>(null);
   const startBtnRef = useRef<HTMLButtonElement>(null);
 
+  // Declared before the timer effect and memoised on `phase`, so the interval
+  // always closes over the current phase rather than the one captured at mount.
+  const finishPhase = useCallback(async () => {
+    if ("vibrate" in navigator) navigator.vibrate([30, 50, 30]);
+    if (phase === "focus") {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const existing = await db.studyLog.get(today);
+      if (existing) {
+        await db.studyLog.update(today, {
+          minutes: existing.minutes + 25,
+          sessions: existing.sessions + 1,
+        });
+      } else {
+        await db.studyLog.add({
+          date: today,
+          minutes: 25,
+          sessions: 1,
+          questsCompleted: 0,
+          flashcardsReviewed: 0,
+        });
+      }
+      notify("Focus session complete", "Take a 5-minute break.");
+      setPhase("break");
+      setSeconds(BREAK_SECONDS);
+    } else {
+      notify("Break over", "Ready for another Pomodoro?");
+      setPhase("idle");
+      setSeconds(FOCUS_SECONDS);
+    }
+  }, [phase]);
+
   useEffect(() => {
     if (phase === "idle") return;
     const timer = setInterval(() => {
       setSeconds((s) => {
         if (s <= 1) {
           clearInterval(timer);
-          finishPhase();
+          // Floating async call — without a catch, a failed studyLog write or a
+          // Notification throw becomes an unhandled rejection nothing can see.
+          finishPhase().catch((err) => console.error("Pomodoro phase failed:", err));
           return 0;
         }
         return s - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [phase]); // eslint-disable-line
+  }, [phase, finishPhase]);
 
   useEffect(() => {
     if (!open) return;
@@ -57,39 +104,6 @@ export default function PomodoroFab() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
-
-  async function finishPhase() {
-    if ("vibrate" in navigator) navigator.vibrate([30, 50, 30]);
-    if (phase === "focus") {
-      const today = format(new Date(), "yyyy-MM-dd");
-      const existing = await db.studyLog.get(today);
-      if (existing) {
-        await db.studyLog.update(today, {
-          minutes: existing.minutes + 25,
-          sessions: existing.sessions + 1,
-        });
-      } else {
-        await db.studyLog.add({
-          date: today,
-          minutes: 25,
-          sessions: 1,
-          questsCompleted: 0,
-          flashcardsReviewed: 0,
-        });
-      }
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Focus session complete", { body: "Take a 5-minute break.", icon: "/icons/icon-192.png" });
-      }
-      setPhase("break");
-      setSeconds(BREAK_SECONDS);
-    } else {
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Break over", { body: "Ready for another Pomodoro?", icon: "/icons/icon-192.png" });
-      }
-      setPhase("idle");
-      setSeconds(FOCUS_SECONDS);
-    }
-  }
 
   const start = () => {
     setPhase("focus");

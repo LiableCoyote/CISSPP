@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { db, type Profile } from "../db/schema";
 import { xpToLevel } from "../lib/xp";
-import { useLevelUp } from "../components/gamification/LevelUpModal";
+import { useLevelUp } from "./levelUp";
 import { checkAchievements } from "../features/achievements/engine";
 
 interface ProfileStore {

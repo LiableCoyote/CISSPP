@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { db, type Question, type QuizAttempt, type QuizAnswer } from "../../db/schema";
 import { ALL_QUESTIONS } from "../../data/questions.seed";
@@ -43,7 +43,34 @@ export default function QuizSessionPage() {
   const [timeLeft, setTimeLeft] = useState<number>(
     mode === "full" ? 3 * 60 * 60 : mode === "mixed" ? 60 * 60 : 25 * 60,
   );
-  const questionStart = useRef<number>(Date.now());
+  // Set when each question is shown. Not seeded with Date.now() at the useRef
+  // call, because that argument is re-evaluated on every render.
+  const questionStart = useRef<number | null>(null);
+
+  // Declared ahead of the effects that call it — it was previously a const arrow
+  // defined ~100 lines below the effect referencing it.
+  const finalize = useCallback(async () => {
+    const finishedAt = new Date();
+    const totalSeconds = Math.round((finishedAt.getTime() - startedAt.getTime()) / 1000);
+    const correct = answers.filter((a) => a.correct).length;
+    const target = mode === "full" ? 70 : null;
+    const scorePct = Math.round((correct / questions.length) * 100);
+    const attempt: QuizAttempt = {
+      id: attemptId,
+      mode,
+      domainId: domainId as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | null,
+      questionIds: questions.map((x) => x.id),
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+      totalSeconds,
+      score: correct,
+      scorePct,
+      passed: target !== null ? scorePct >= target : null,
+      targetScorePct: target,
+    };
+    await db.attempts.add(attempt);
+    navigate(`/quiz/review/${attemptId}`);
+  }, [answers, attemptId, domainId, mode, navigate, questions, startedAt]);
 
   useEffect(() => {
     const timer = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
@@ -51,16 +78,13 @@ export default function QuizSessionPage() {
   }, []);
 
   useEffect(() => {
-    if (timeLeft === 0) finalize();
-  }, [timeLeft]); // eslint-disable-line
+    if (timeLeft === 0) void finalize();
+  }, [timeLeft, finalize]);
 
+  // Refs and focus only — the per-question state reset moved into next(), so
+  // this effect no longer calls setState.
   useEffect(() => {
     questionStart.current = Date.now();
-    setPicked(null);
-    setConfidence(null);
-    setSubmitted(false);
-    setShowExplanation(false);
-    setNudge(null);
     // Move focus to the question for screen readers when advancing
     const el = document.getElementById("main-content");
     el?.focus();
@@ -95,7 +119,7 @@ export default function QuizSessionPage() {
 
   const submit = async () => {
     if (picked === null) return;
-    const timeTakenMs = Date.now() - questionStart.current;
+    const timeTakenMs = questionStart.current === null ? 0 : Date.now() - questionStart.current;
     const speed = isSpeedReader(timeTakenMs);
     const tech = isTechnicianAnswer(q, picked);
     const correct = picked === q.answerIndex;
@@ -141,32 +165,16 @@ export default function QuizSessionPage() {
   const next = async () => {
     if (isLast) {
       await finalize();
-    } else {
-      setIdx((i) => i + 1);
+      return;
     }
-  };
-
-  const finalize = async () => {
-    const finishedAt = new Date();
-    const totalSeconds = Math.round((finishedAt.getTime() - startedAt.getTime()) / 1000);
-    const correct = answers.filter((a) => a.correct).length;
-    const target = mode === "full" ? 70 : null;
-    const scorePct = Math.round((correct / questions.length) * 100);
-    const attempt: QuizAttempt = {
-      id: attemptId,
-      mode,
-      domainId: domainId as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | null,
-      questionIds: questions.map((x) => x.id),
-      startedAt: startedAt.toISOString(),
-      finishedAt: finishedAt.toISOString(),
-      totalSeconds,
-      score: correct,
-      scorePct,
-      passed: target !== null ? scorePct >= target : null,
-      targetScorePct: target,
-    };
-    await db.attempts.add(attempt);
-    navigate(`/quiz/review/${attemptId}`);
+    // Reset here rather than in an effect keyed on `idx`: the advance is the
+    // event that invalidates this question's state.
+    setIdx((i) => i + 1);
+    setPicked(null);
+    setConfidence(null);
+    setSubmitted(false);
+    setShowExplanation(false);
+    setNudge(null);
   };
 
   const fmtTime = (s: number) =>

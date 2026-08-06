@@ -12,7 +12,7 @@ type Quality = 0 | 1 | 2 | 3 | 4; // 0=complete blackout, 1=incorrect, 2=correct
 export function sm2(state: SM2State, quality: Quality): SM2State {
   const { ease, interval, reps, lapses } = state;
 
-  let newEase = Math.max(1.3, ease + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+  const newEase = Math.max(1.3, ease + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
 
   if (quality < 3) {
     return {

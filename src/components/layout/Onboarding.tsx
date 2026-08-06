@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useProfile } from "../../state/profile";
 import { updateSlotMeta, getActiveSlotId } from "../../lib/profiles";
+import { getItem, setItem } from "../../lib/safeStorage";
 
 type Step = "welcome" | "exam-date" | "daily-goal" | "done";
 
@@ -10,17 +11,14 @@ export default function Onboarding() {
   const [name, setName] = useState("");
   const [examDate, setExamDate] = useState("");
   const [dailyGoal, setDailyGoal] = useState(120);
-  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Show onboarding when profile is fresh (default name, no real exam date set by user)
-  useEffect(() => {
-    if (!profile) return;
-    const wasOnboarded = localStorage.getItem("cisspp-onboarded-" + getActiveSlotId());
-    if (!wasOnboarded && profile.displayName === "Scholar") {
-      setVisible(true);
-    }
-  }, [profile]);
+  // Derived during render rather than pushed into state by an effect: the wizard
+  // shows for a fresh profile that hasn't completed onboarding, and `dismissed`
+  // is the only thing the finish handler needs to set.
+  const wasOnboarded = getItem("cisspp-onboarded-" + getActiveSlotId()) !== null;
+  const visible = !dismissed && !wasOnboarded && !!profile && profile.displayName === "Scholar";
 
   // Focus trap
   useEffect(() => {
@@ -63,8 +61,10 @@ export default function Onboarding() {
       displayName: name || "Scholar",
       examDate: examDate || null,
     });
-    localStorage.setItem("cisspp-onboarded-" + getActiveSlotId(), "1");
-    setVisible(false);
+    // Guarded: an unguarded throw here previously skipped the line below, leaving
+    // the wizard on screen forever even though the profile had already saved.
+    setItem("cisspp-onboarded-" + getActiveSlotId(), "1");
+    setDismissed(true);
   };
 
   const eightWeeksDefault = () => {

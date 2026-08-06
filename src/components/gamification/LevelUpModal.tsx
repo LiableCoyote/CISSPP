@@ -1,19 +1,7 @@
-import { create } from "zustand";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import { LEVEL_TITLES } from "../../lib/xp";
-
-interface LevelUpStore {
-  newLevel: number | null;
-  open: (level: number) => void;
-  close: () => void;
-}
-
-export const useLevelUp = create<LevelUpStore>((set) => ({
-  newLevel: null,
-  open: (level) => set({ newLevel: level }),
-  close: () => set({ newLevel: null }),
-}));
+import { useLevelUp } from "../../state/levelUp";
 
 export default function LevelUpModal() {
   const newLevel = useLevelUp((s) => s.newLevel);

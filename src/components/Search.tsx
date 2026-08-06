@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../db/schema";
@@ -24,7 +24,7 @@ function matches(text: string, q: string): boolean {
 export default function Search() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [activeIdx, setActiveIdx] = useState(0);
+  const [rawActiveIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
@@ -32,12 +32,22 @@ export default function Search() {
   const flashcards = useLiveQuery(() => db.flashcards.toArray(), []);
   const notes = useLiveQuery(() => db.notes.toArray(), []);
 
+  // Resetting here rather than in an effect keyed on `open` keeps the state
+  // change in the event that caused it.
+  const openSearch = useCallback(() => {
+    setQuery("");
+    setActiveIdx(0);
+    setOpen(true);
+    setTimeout(() => inputRef.current?.focus(), 30);
+  }, []);
+
   // Cmd/Ctrl+K to open
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setOpen((v) => !v);
+        if (open) setOpen(false);
+        else openSearch();
       }
       if (e.key === "Escape" && open) {
         setOpen(false);
@@ -45,24 +55,15 @@ export default function Search() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
-  // Focus input when opened
-  useEffect(() => {
-    if (open) {
-      setQuery("");
-      setActiveIdx(0);
-      setTimeout(() => inputRef.current?.focus(), 30);
-    }
-  }, [open]);
+  }, [open, openSearch]);
 
   // Expose a global open handler for the header icon
   useEffect(() => {
-    (window as Window & { __cisspp_openSearch?: () => void }).__cisspp_openSearch = () => setOpen(true);
+    (window as Window & { __cisspp_openSearch?: () => void }).__cisspp_openSearch = openSearch;
     return () => {
       delete (window as Window & { __cisspp_openSearch?: () => void }).__cisspp_openSearch;
     };
-  }, []);
+  }, [openSearch]);
 
   const hits = useMemo<Hit[]>(() => {
     const q = query.trim().toLowerCase();
@@ -162,10 +163,10 @@ export default function Search() {
     return out;
   }, [query, quests, flashcards, notes]);
 
-  // Clamp active index
-  useEffect(() => {
-    if (activeIdx >= hits.length) setActiveIdx(0);
-  }, [hits.length, activeIdx]);
+  // Derived rather than stored: when the hit list shrinks under the cursor the
+  // clamp applies on the same render, instead of after an extra effect pass
+  // that briefly indexes past the end of the list.
+  const activeIdx = rawActiveIdx >= hits.length ? 0 : rawActiveIdx;
 
   const go = (hit: Hit) => {
     setOpen(false);

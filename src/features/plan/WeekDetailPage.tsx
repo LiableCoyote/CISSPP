@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Quest } from "../../db/schema";
 import { WEEK_META } from "../../data/weeks";
 import { useProfile } from "../../state/profile";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { checkAchievements } from "../achievements/engine";
 import { pushToast } from "../../state/toast";
 import EmptyState from "../../components/ui/EmptyState";
@@ -51,7 +51,7 @@ export default function WeekDetailPage() {
     // Update streak if not already active today
     const lastActive = profile.lastActiveDate;
     if (lastActive !== today) {
-      const yesterday = format(new Date(Date.now() - 86400000), "yyyy-MM-dd");
+      const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
       const newStreak = lastActive === yesterday ? profile.streak + 1 : 1;
       await updateProfile({
         lastActiveDate: today,
