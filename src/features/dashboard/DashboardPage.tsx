@@ -6,11 +6,14 @@ import { DOMAINS } from "../../data/domains";
 import { WEEK_META } from "../../data/weeks";
 import { xpToLevel, LEVEL_XP_THRESHOLDS } from "../../lib/xp";
 import { differenceInCalendarDays, format, parseISO } from "date-fns";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
+import { lazy, Suspense } from "react";
 import InstallPrompt from "../../components/InstallPrompt";
 import { ACHIEVEMENT_DEFS } from "../../data/achievements";
 import ShareCard from "../stats/ShareCard";
 import NextUp from "./NextUp";
+
+// Recharts' polar bundle is ~97KB — keep it off the landing page's critical path.
+const MasteryRadar = lazy(() => import("./MasteryRadar"));
 
 const MINDSET_PROMPTS = [
   "Would a CISO patch the server, or update the policy first?",
@@ -215,14 +218,9 @@ export default function DashboardPage() {
         <section aria-labelledby="mastery-heading" className="card mb-4">
           <h3 id="mastery-heading" className="font-semibold mb-2">Domain Mastery</h3>
           <div role="img" aria-label={`Domain mastery chart: ${radarData.map(r => `${r.domain} ${r.mastery}%`).join(", ")}`}>
-            <ResponsiveContainer width="100%" height={240}>
-              <RadarChart data={radarData} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
-                <PolarGrid stroke="#243046" />
-                <PolarAngleAxis dataKey="domain" stroke="#8b97ab" fontSize={11} />
-                <PolarRadiusAxis domain={[0, 100]} tick={false} stroke="#243046" />
-                <Radar dataKey="mastery" fill="#6ee7b7" fillOpacity={0.3} stroke="#6ee7b7" strokeWidth={2} />
-              </RadarChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<div className="h-[240px]" aria-hidden="true" />}>
+              <MasteryRadar data={radarData} />
+            </Suspense>
           </div>
         </section>
       )}

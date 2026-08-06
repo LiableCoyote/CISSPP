@@ -176,6 +176,8 @@ export const VAULT_TABLES: VaultTable[] = [
 export type OrderGameDef = {
   id: string;
   title: string;
+  /** Core = memorise before exam day. Advanced = know it, less frequently tested. */
+  difficulty: "Core" | "Advanced";
   hint: string;
   /** Correct order, top to bottom. */
   order: string[];
@@ -187,6 +189,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "bcp-steps",
     title: "BCP Order of Operations",
+    difficulty: "Core",
     hint: "Drag to order. BIA FIRST — always.",
     order: [
       "Project Scope",
@@ -202,6 +205,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "ir-phases",
     title: "NIST 800-61 Incident Response Phases",
+    difficulty: "Core",
     hint: "Four phases, in order.",
     order: [
       "Preparation",
@@ -214,6 +218,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "osi-layers",
     title: "OSI Model (top → bottom)",
+    difficulty: "Core",
     hint: "All People Seem To Need Data Processing.",
     order: [
       "Application",
@@ -229,6 +234,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "rmf-steps",
     title: "NIST Risk Management Framework (RMF)",
+    difficulty: "Advanced",
     hint: "Seven steps. Prepare was added in Rev 2.",
     order: [
       "Prepare",
@@ -244,6 +250,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "forensics",
     title: "Digital Forensics Process",
+    difficulty: "Advanced",
     hint: "Preserve before you touch anything.",
     order: [
       "Identification",
@@ -259,6 +266,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "iaaa",
     title: "Access Control Process (IAAA)",
+    difficulty: "Core",
     hint: "Four steps. Accountability is the one people forget.",
     order: ["Identification", "Authentication", "Authorization", "Accountability"],
     why: "You claim who you are, prove it, get granted rights, then your actions are logged against your identity.",
@@ -266,6 +274,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "data-lifecycle",
     title: "Data Lifecycle",
+    difficulty: "Core",
     hint: "Cradle to grave. Classification happens at creation.",
     order: ["Create", "Store", "Use", "Share", "Archive", "Destroy"],
     why: "Classify at creation — every later control (storage encryption, sharing rules, retention, destruction method) derives from that label.",
@@ -273,6 +282,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "change-mgmt",
     title: "Change Management Process",
+    difficulty: "Advanced",
     hint: "Approval before build. Always.",
     order: [
       "Request Change",
@@ -288,6 +298,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "bcp-test-rigor",
     title: "BCP/DR Test Types (least → most disruptive)",
+    difficulty: "Advanced",
     hint: "Order by how much real production risk each one carries.",
     order: [
       "Read-Through (Checklist)",
@@ -301,6 +312,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "sdlc",
     title: "Secure SDLC Phases",
+    difficulty: "Core",
     hint: "Security belongs in every phase — but know the canonical order.",
     order: [
       "Requirements & Planning",
@@ -315,6 +327,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "kerberos-flow",
     title: "Kerberos Authentication Flow",
+    difficulty: "Advanced",
     hint: "AS first, then TGS, then the service.",
     order: [
       "Client requests TGT from Authentication Server (AS)",
@@ -329,6 +342,7 @@ export const ORDER_GAMES: OrderGameDef[] = [
   {
     id: "evidence-lifecycle",
     title: "Evidence Lifecycle",
+    difficulty: "Advanced",
     hint: "Chain of custody runs across all of it.",
     order: [
       "Collection & Identification",

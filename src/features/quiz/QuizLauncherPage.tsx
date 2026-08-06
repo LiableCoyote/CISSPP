@@ -39,7 +39,7 @@ export default function QuizLauncherPage() {
               }`}
             >
               <div className="flex items-center gap-2 mb-1" aria-hidden="true">
-                <span className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold" style={{ backgroundColor: d.accent + "33", color: d.accent }}>
+                <span className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-ink" style={{ backgroundColor: d.accent + "33" }}>
                   D{d.id}
                 </span>
                 <span className="text-xs font-medium">{d.weight}%</span>

@@ -67,6 +67,7 @@ export default function Toast() {
   const toasts = useToast((s) => s.toasts);
   return (
     <div
+      role="region"
       aria-label="Notifications"
       className="fixed z-50 top-4 right-4 flex flex-col gap-2 pointer-events-none safe-top"
     >

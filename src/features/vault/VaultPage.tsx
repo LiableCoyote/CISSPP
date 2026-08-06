@@ -14,7 +14,8 @@ export default function VaultPage() {
   return (
     <div className={reading ? "min-h-screen bg-bg p-4 max-w-3xl mx-auto safe-top safe-bottom" : "page"}>
       <div className="flex items-center justify-between mb-4 gap-2 no-print">
-        <div>
+        {/* min-w-0 lets the subtitle wrap instead of shoving the buttons off-screen */}
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Memorization Vault</h1>
           <p className="text-sm text-dim mt-1">If you can't reproduce these cold, you're not ready.</p>
         </div>
@@ -63,10 +64,16 @@ export default function VaultPage() {
                     : "bg-panel2 text-dim border-transparent hover:text-ink"
                 }`}
               >
+                {g.difficulty === "Core" && <span aria-hidden="true">★ </span>}
                 {g.title}
               </button>
             ))}
           </div>
+          <p className="text-xs text-dim mb-3">
+            <span aria-hidden="true">★ </span>Core sequences are the ones to memorise before exam
+            day. Currently drilling:{" "}
+            <span className="text-ink font-medium">{activeGame.difficulty}</span>.
+          </p>
 
           <div className="mb-8">
             <OrderGame

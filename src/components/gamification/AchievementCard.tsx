@@ -20,10 +20,19 @@ export default function AchievementCard({
   const tier = TIER_STYLES[def.tier];
 
   return (
+    // min-w-0 is required: as a grid child this box defaults to min-width:auto,
+    // which stops the truncating text below from ever shrinking.
+    // Locked cards fade only the decorative icon — fading the whole card composited
+    // the small chip text down to a 2.29:1 contrast ratio.
     <div
-      className={`card p-3 flex items-center gap-3 ${earned ? `${tier.ring} border` : "opacity-50"}`}
+      className={`card p-3 flex items-center gap-3 min-w-0 ${
+        earned ? `${tier.ring} border` : "bg-panel/40"
+      }`}
     >
-      <span className="text-2xl leading-none shrink-0" aria-hidden="true">
+      <span
+        className={`text-2xl leading-none shrink-0 ${earned ? "" : "opacity-40 grayscale"}`}
+        aria-hidden="true"
+      >
         {def.icon}
       </span>
       <div className="flex-1 min-w-0">

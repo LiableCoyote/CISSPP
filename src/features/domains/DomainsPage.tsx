@@ -29,8 +29,8 @@ export default function DomainsPage() {
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm"
-                    style={{ backgroundColor: d.accent + "22", color: d.accent }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm text-ink"
+                    style={{ backgroundColor: d.accent + "22" }}
                   >
                     D{d.id}
                   </div>
