@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { db } from "../../db/schema";
 import { DOMAINS } from "../../data/domains";
 import EmptyState from "../../components/ui/EmptyState";
+import SessionTimeline from "./SessionTimeline";
+import MasteryTrend from "./MasteryTrend";
 import {
   LineChart,
   Line,
@@ -147,6 +149,9 @@ export default function StatsPage() {
         </div>
       </div>
 
+      {/* Session timeline */}
+      <SessionTimeline studyLog={studyLog} attempts={attempts} />
+
       {/* CISO score */}
       <div className="card mb-6 border-accent/40 bg-accent/5">
         <h3 className="font-semibold mb-1">CISO Thinking Score</h3>
@@ -223,6 +228,9 @@ export default function StatsPage() {
           </p>
         </div>
       )}
+
+      {/* Per-domain learning curves */}
+      <MasteryTrend attempts={attempts} />
 
       {/* Score trend */}
       {scoreData.length > 0 && (

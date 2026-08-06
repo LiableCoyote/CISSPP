@@ -10,6 +10,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import InstallPrompt from "../../components/InstallPrompt";
 import { ACHIEVEMENT_DEFS } from "../../data/achievements";
 import ShareCard from "../stats/ShareCard";
+import NextUp from "./NextUp";
 
 const MINDSET_PROMPTS = [
   "Would a CISO patch the server, or update the policy first?",
@@ -72,26 +73,8 @@ export default function DashboardPage() {
   // Countdown color
   const countdownColor = daysUntilExam > 28 ? "text-high" : daysUntilExam > 14 ? "text-warn" : daysUntilExam > 7 ? "text-med" : "text-danger";
 
-  // Domain hoarder check - last 7 days
-  const last7 = attempts.filter((a) => differenceInCalendarDays(today, parseISO(a.startedAt)) <= 7);
-  const domainHoard: Record<number, number> = {};
-  last7.forEach((a) => {
-    if (a.domainId) domainHoard[a.domainId] = (domainHoard[a.domainId] || 0) + 1;
-  });
-  const totalLast7 = Object.values(domainHoard).reduce((a, b) => a + b, 0);
-  const maxD = Math.max(0, ...Object.values(domainHoard));
-  const hoarderAlert = totalLast7 >= 3 && maxD / totalLast7 > 0.6;
-  const hoarderDomain = Object.entries(domainHoard).find(([, v]) => v === maxD)?.[0];
-
-  // Cramming alert: 6+ attempts in a single domain over the last 2 days.
-  const last2 = attempts.filter((a) => differenceInCalendarDays(today, parseISO(a.startedAt)) <= 2);
-  const cram2d: Record<number, number> = {};
-  last2.forEach((a) => {
-    if (a.domainId) cram2d[a.domainId] = (cram2d[a.domainId] || 0) + 1;
-  });
-  const crammedMax = Math.max(0, ...Object.values(cram2d));
-  const crammingAlert = crammedMax >= 6;
-  const crammedDomain = Object.entries(cram2d).find(([, v]) => v === crammedMax)?.[0];
+  // Domain-imbalance and cramming warnings now come from detectStudySignals,
+  // rendered by <NextUp /> alongside the other study-pattern signals.
 
   return (
     <div className="page">
@@ -107,6 +90,15 @@ export default function DashboardPage() {
           Day {Math.min(56, daysSinceStart + 1)} of 56 · Week {currentWeek} · Day {currentDay}
         </p>
       </section>
+
+      {/* Study signals + what to do next */}
+      <NextUp
+        profile={profile}
+        attempts={attempts}
+        quests={quests}
+        currentWeek={currentWeek}
+        currentDay={currentDay}
+      />
 
       {/* Level progress */}
       <div className="card mb-4">
@@ -187,31 +179,6 @@ export default function DashboardPage() {
             })}
           </ul>
         </section>
-      )}
-
-      {/* Domain hoarder warning */}
-      {hoarderAlert && (
-        <div className="card mb-4 border-warn/40 bg-warn/5" role="alert">
-          <p className="text-sm">
-            <span className="font-semibold text-warn">
-              <span aria-hidden="true">⚠ </span>Domain Hoarder Alert:{" "}
-            </span>
-            You've drilled Domain {hoarderDomain} more than 60% of the past week. Time to rotate.
-          </p>
-        </div>
-      )}
-
-      {/* Cramming alert */}
-      {crammingAlert && (
-        <div className="card mb-4 border-warn/40 bg-warn/5" role="alert">
-          <p className="text-sm">
-            <span className="font-semibold text-warn">
-              <span aria-hidden="true">⏱ </span>Cramming detected:{" "}
-            </span>
-            {crammedMax} quizzes on Domain {crammedDomain} in 2 days. Try a mixed set or
-            flashcard review tomorrow — spaced repetition beats marathon drilling.
-          </p>
-        </div>
       )}
 
       {/* Today's quests */}
