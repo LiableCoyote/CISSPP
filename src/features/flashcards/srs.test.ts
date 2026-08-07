@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sm2 } from "./srs";
+import { sm2, nextReviewDate } from "./srs";
 
 const fresh = { ease: 2.5, interval: 0, reps: 0, lapses: 0 };
 
@@ -32,5 +32,36 @@ describe("sm2", () => {
 
   it("increments reps on a passing grade", () => {
     expect(sm2(fresh, 3).reps).toBe(1);
+  });
+});
+
+describe("nextReviewDate", () => {
+  it("advances by whole days", () => {
+    const from = new Date("2026-03-10T09:00:00");
+    expect(nextReviewDate(from, 5).getDate()).toBe(15);
+  });
+
+  it("rolls over a month boundary", () => {
+    const from = new Date("2026-01-30T09:00:00");
+    const next = nextReviewDate(from, 3);
+    expect(next.getMonth()).toBe(1); // February
+    expect(next.getDate()).toBe(2);
+  });
+
+  it("rolls over a year boundary", () => {
+    const next = nextReviewDate(new Date("2026-12-30T09:00:00"), 5);
+    expect(next.getFullYear()).toBe(2027);
+  });
+
+  it("does not mutate the input", () => {
+    const from = new Date("2026-03-10T09:00:00");
+    const before = from.getTime();
+    nextReviewDate(from, 7);
+    expect(from.getTime()).toBe(before);
+  });
+
+  it("returns the same day for a zero interval", () => {
+    const from = new Date("2026-03-10T09:00:00");
+    expect(nextReviewDate(from, 0).getDate()).toBe(10);
   });
 });

@@ -11,8 +11,11 @@ import type { Profile, Quest } from "./schema";
  * Adds content shipped after the user's DB was first seeded. Only inserts rows
  * whose id is missing, so existing SRS progress, quiz history and watched flags
  * are never touched.
+ *
+ * Exported for tests: that idempotency claim is the whole contract, and it was
+ * previously unreachable from outside initializeDb.
  */
-async function syncSeedContent() {
+export async function syncSeedContent() {
   const now = new Date().toISOString();
 
   const cardIds = new Set(await db.flashcards.toCollection().primaryKeys());

@@ -59,8 +59,11 @@ export function buildMasteryTrend(attempts: QuizAttempt[]): MasteryPoint[] {
   });
 }
 
-export function buildDomainVelocity(attempts: QuizAttempt[], windowDays = 7): DomainVelocity[] {
-  const now = new Date();
+export function buildDomainVelocity(
+  attempts: QuizAttempt[],
+  windowDays = 7,
+  now: Date = new Date(),
+): DomainVelocity[] {
   const past = subDays(now, windowDays);
 
   return DOMAINS.map((d) => {
@@ -106,8 +109,8 @@ export function buildTimeline(
   studyLog: StudyDay[],
   attempts: QuizAttempt[],
   windowDays = 30,
+  today: Date = new Date(),
 ): TimelineDay[] {
-  const today = new Date();
   const logByDate = new Map(studyLog.map((l) => [l.date, l]));
 
   const out: TimelineDay[] = [];
@@ -180,9 +183,9 @@ export function buildWeeklySummary(opts: {
   attempts: QuizAttempt[];
   unlockedAt: string[];
   days?: number;
+  now?: Date;
 }): WeeklySummary {
-  const { studyLog, attempts, unlockedAt, days = 7 } = opts;
-  const now = new Date();
+  const { studyLog, attempts, unlockedAt, days = 7, now = new Date() } = opts;
 
   const inWindow = (iso: string, from: number, to: number) => {
     const age = differenceInCalendarDays(now, parseISO(iso));
@@ -258,8 +261,11 @@ const DOMAIN_CRAM_ATTEMPTS = 6;
 const HOARD_SHARE = 0.6;
 
 /** Counts completed attempts per domain within the last `days`. */
-function attemptsByDomain(attempts: QuizAttempt[], days: number): Map<DomainId, number> {
-  const now = new Date();
+function attemptsByDomain(
+  attempts: QuizAttempt[],
+  days: number,
+  now: Date,
+): Map<DomainId, number> {
   const counts = new Map<DomainId, number>();
   for (const a of attempts) {
     // Abandoned attempts aren't study — every other consumer filters on this.
@@ -282,10 +288,11 @@ export function detectStudySignals(opts: {
   lastActiveDate: string | null;
   streak: number;
   overdueCards: number;
+  /** Injectable so the whole signal set can be evaluated at a fixed instant. */
+  now?: Date;
 }): StudySignal[] {
-  const { studyLog, attempts, lastActiveDate, streak, overdueCards } = opts;
+  const { studyLog, attempts, lastActiveDate, streak, overdueCards, now: today = new Date() } = opts;
   const signals: StudySignal[] = [];
-  const today = new Date();
   const todayKey = format(today, "yyyy-MM-dd");
 
   // Cramming — too much crammed into one day.
@@ -344,7 +351,7 @@ export function detectStudySignals(opts: {
   }
 
   // Marathon drilling one domain — beats spaced repetition into the ground.
-  const cram2d = attemptsByDomain(attempts, 2);
+  const cram2d = attemptsByDomain(attempts, 2, today);
   const topRecent = [...cram2d.entries()].sort((a, b) => b[1] - a[1])[0];
   // Only set once the threshold is actually met. Previously this held the
   // most-attempted domain regardless, and the hoard check below de-duplicated
@@ -365,7 +372,7 @@ export function detectStudySignals(opts: {
   }
 
   // Over-indexing on one domain across the week leaves the others untested.
-  const week = attemptsByDomain(attempts, 7);
+  const week = attemptsByDomain(attempts, 7, today);
   const weekTotal = [...week.values()].reduce((s, n) => s + n, 0);
   const topDomain = [...week.entries()].sort((a, b) => b[1] - a[1])[0];
   if (
