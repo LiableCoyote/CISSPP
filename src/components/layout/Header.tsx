@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useProfile } from "../../state/profile";
 import { xpToLevel } from "../../lib/xp";
+import { daysUntilExam } from "../../lib/campaign";
 
 export default function Header() {
   const { profile } = useProfile();
@@ -21,9 +22,9 @@ export default function Header() {
   if (!profile) return null;
 
   const { level, levelTitle } = xpToLevel(profile.xp);
-  const daysUntilExam = profile.examDate
-    ? Math.ceil((new Date(profile.examDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
+  // Shared helper so this agrees with the Dashboard, which is often on screen
+  // at the same time — the two used different rounding and could disagree.
+  const daysLeft = daysUntilExam(profile) ?? 0;
 
   return (
     <header
@@ -71,9 +72,9 @@ export default function Header() {
           </span>
           <span
             className="pill bg-accent2/15 text-accent2 font-semibold"
-            aria-label={daysUntilExam > 0 ? `${daysUntilExam} days until exam` : "Exam day"}
+            aria-label={daysLeft > 0 ? `${daysLeft} days until exam` : "Exam day"}
           >
-            {daysUntilExam > 0 ? `${daysUntilExam}d` : "Exam!"}
+            {daysLeft > 0 ? `${daysLeft}d` : "Exam!"}
           </span>
         </div>
       </div>

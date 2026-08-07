@@ -3,10 +3,20 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, type Quest } from "../../db/schema";
 import { WEEK_META } from "../../data/weeks";
 import { useProfile } from "../../state/profile";
-import { format, subDays } from "date-fns";
 import { checkAchievements } from "../achievements/engine";
 import { pushToast } from "../../state/toast";
+import { logStudySession } from "../../lib/session";
 import EmptyState from "../../components/ui/EmptyState";
+
+/** Rough minutes credited per quest type, used for the study log. */
+const QUEST_MINUTES: Record<string, number> = {
+  watch: 25,
+  read: 20,
+  quiz: 35,
+  exam: 180,
+  flashcards: 15,
+  default: 20,
+};
 
 export default function WeekDetailPage() {
   const { n } = useParams();
@@ -29,35 +39,12 @@ export default function WeekDetailPage() {
     await db.quests.update(q.id, { completedAt: new Date().toISOString() });
     // Grant XP
     await updateProfile({ xp: profile.xp + q.xp });
-    // Log study minutes (estimate from quest type)
-    const minutes =
-      q.type === "watch" ? 25 : q.type === "read" ? 20 : q.type === "quiz" ? 35 : q.type === "exam" ? 180 : q.type === "flashcards" ? 15 : 20;
-    const today = format(new Date(), "yyyy-MM-dd");
-    const existing = await db.studyLog.get(today);
-    if (existing) {
-      await db.studyLog.update(today, {
-        minutes: existing.minutes + minutes,
-        questsCompleted: existing.questsCompleted + 1,
-      });
-    } else {
-      await db.studyLog.add({
-        date: today,
-        minutes,
-        sessions: 1,
-        questsCompleted: 1,
-        flashcardsReviewed: 0,
-      });
-    }
-    // Update streak if not already active today
-    const lastActive = profile.lastActiveDate;
-    if (lastActive !== today) {
-      const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
-      const newStreak = lastActive === yesterday ? profile.streak + 1 : 1;
-      await updateProfile({
-        lastActiveDate: today,
-        streak: newStreak,
-        longestStreak: Math.max(profile.longestStreak, newStreak),
-      });
+    const streakPatch = await logStudySession(profile, {
+      minutes: QUEST_MINUTES[q.type] ?? QUEST_MINUTES.default,
+      questsCompleted: 1,
+    });
+    if (Object.keys(streakPatch).length > 0) {
+      await updateProfile(streakPatch);
     }
     // Haptic on mobile
     if ("vibrate" in navigator) navigator.vibrate(10);

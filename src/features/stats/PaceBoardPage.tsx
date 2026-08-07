@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { differenceInCalendarDays, parseISO } from "date-fns";
 import { db } from "../../db/schema";
 import { useProfile } from "../../state/profile";
-import { DOMAINS } from "../../data/domains";
+import { campaignPosition, domainsMastered } from "../../lib/campaign";
 import {
   PACE_ARCHETYPES,
   PACE_METRICS,
@@ -28,20 +27,13 @@ export default function PaceBoardPage() {
 
   if (!profile || attempts === undefined || unlockCount === undefined) return null;
 
-  const daysSinceStart = differenceInCalendarDays(new Date(), parseISO(profile.startDate));
-  const currentWeek = Math.min(8, Math.max(1, Math.floor(daysSinceStart / 7) + 1));
-
-  // Domains averaging 70%+ across their attempts.
-  const domainsMastered = DOMAINS.filter((d) => {
-    const ds = attempts.filter((a) => a.domainId === d.id && a.finishedAt);
-    if (ds.length === 0) return false;
-    return ds.reduce((s, a) => s + a.scorePct, 0) / ds.length >= 70;
-  }).length;
+  const { week: currentWeek } = campaignPosition(profile);
+  const mastered = domainsMastered(attempts);
 
   const yourValue: Record<PaceMetric, number> = {
     xp: profile.xp,
     streak: profile.streak,
-    domains: domainsMastered,
+    domains: mastered,
     achievements: unlockCount,
   };
 

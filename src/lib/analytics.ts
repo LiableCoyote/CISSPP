@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format, parseISO, subDays } from "date-fns";
+import { differenceInCalendarDays, endOfDay, format, parseISO, subDays } from "date-fns";
 import type { DomainId, QuizAttempt, StudyDay } from "../db/schema";
 import { DOMAINS } from "../data/domains";
 
@@ -44,7 +44,10 @@ export function buildMasteryTrend(attempts: QuizAttempt[]): MasteryPoint[] {
 
   return dates.map((date) => {
     // End of day, so same-day attempts are all included at their own point.
-    const cutoff = parseISO(`${date}T23:59:59`);
+    // Built via endOfDay on a parsed date rather than parseISO("...T23:59:59"):
+    // that string parses as local time while startedAt is UTC, which made
+    // same-day inclusion depend on the reader's timezone offset.
+    const cutoff = endOfDay(parseISO(date));
     const point: MasteryPoint = { date, label: format(parseISO(date), "MMM d") };
     for (const d of DOMAINS) {
       const domainAttempts = scored.filter((a) => a.domainId === d.id);

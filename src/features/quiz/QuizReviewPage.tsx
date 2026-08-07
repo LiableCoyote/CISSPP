@@ -4,7 +4,7 @@ import { db, type QuizAnswer } from "../../db/schema";
 import { ALL_QUESTIONS } from "../../data/questions.seed";
 import { useProfile } from "../../state/profile";
 import { checkAchievements } from "../achievements/engine";
-import { format } from "date-fns";
+import { logStudySession } from "../../lib/session";
 
 export default function QuizReviewPage() {
   const { id } = useParams();
@@ -53,36 +53,13 @@ export default function QuizReviewPage() {
     const xpGain = Math.round(attempt.scorePct * 2) + (attempt.mode === "full" ? 200 : attempt.mode === "mixed" ? 50 : 25);
     await updateProfile({ xp: profile.xp + xpGain });
 
-    // Log study minutes for the quiz so it counts toward streak + heatmap.
-    const quizMinutes = Math.max(1, Math.round(attempt.totalSeconds / 60));
-    const today = format(new Date(), "yyyy-MM-dd");
-    const existing = await db.studyLog.get(today);
-    if (existing) {
-      await db.studyLog.update(today, {
-        minutes: existing.minutes + quizMinutes,
-        sessions: existing.sessions + 1,
-      });
-    } else {
-      await db.studyLog.add({
-        date: today,
-        minutes: quizMinutes,
-        sessions: 1,
-        questsCompleted: 0,
-        flashcardsReviewed: 0,
-      });
-    }
-
-    // Keep the streak alive on a no-quest quiz day.
-    const lastActive = profile.lastActiveDate;
-    if (lastActive !== today) {
-      const yesterday = format(new Date(Date.now() - 86400000), "yyyy-MM-dd");
-      const newStreak = lastActive === yesterday ? profile.streak + 1 : 1;
-      await updateProfile({
-        lastActiveDate: today,
-        streak: newStreak,
-        longestStreak: Math.max(profile.longestStreak, newStreak),
-      });
-    }
+    // Shared helper rather than a local copy: this used to subtract a fixed
+    // 86_400_000 ms to find "yesterday", which lands on the same calendar date
+    // across a spring-forward DST change and silently breaks the streak.
+    const streakPatch = await logStudySession(profile, {
+      minutes: Math.max(1, Math.round(attempt.totalSeconds / 60)),
+    });
+    if (Object.keys(streakPatch).length > 0) await updateProfile(streakPatch);
 
     await checkAchievements({ kind: "quiz-complete", attemptId: attempt.id });
     await refreshProfile();

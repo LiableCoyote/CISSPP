@@ -3,9 +3,10 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../../db/schema";
 import { useProfile } from "../../state/profile";
 import { DOMAINS } from "../../data/domains";
+import { campaignPosition, daysUntilExam, domainAverages } from "../../lib/campaign";
 import { WEEK_META } from "../../data/weeks";
 import { xpToLevel, LEVEL_XP_THRESHOLDS } from "../../lib/xp";
-import { differenceInCalendarDays, format, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { lazy, Suspense } from "react";
 import InstallPrompt from "../../components/InstallPrompt";
 import { ACHIEVEMENT_DEFS } from "../../data/achievements";
@@ -41,10 +42,9 @@ export default function DashboardPage() {
   if (!profile) return null;
 
   const today = new Date();
-  const daysUntilExam = profile.examDate ? differenceInCalendarDays(parseISO(profile.examDate), today) : 56;
-  const daysSinceStart = differenceInCalendarDays(today, parseISO(profile.startDate));
-  const currentWeek = Math.min(8, Math.max(1, Math.floor(daysSinceStart / 7) + 1));
-  const currentDay = Math.min(7, (daysSinceStart % 7) + 1);
+  const daysLeft = daysUntilExam(profile, today);
+  const daysToShow = daysLeft ?? 56;
+  const { daysSinceStart, week: currentWeek, day: currentDay } = campaignPosition(profile, today);
 
   const { level, levelTitle, xpInLevel } = xpToLevel(profile.xp);
   const nextThreshold = LEVEL_XP_THRESHOLDS[Math.min(level + 1, LEVEL_XP_THRESHOLDS.length - 1)];
@@ -56,10 +56,9 @@ export default function DashboardPage() {
   const todaysQuests = quests.filter((q) => q.week === currentWeek && q.day === currentDay);
 
   // Domain mastery radar
+  const averages = domainAverages(attempts);
   const radarData = DOMAINS.map((d) => {
-    const ds = attempts.filter((a) => a.domainId === d.id);
-    const avg = ds.length > 0 ? ds.reduce((s, a) => s + a.scorePct, 0) / ds.length : 0;
-    return { domain: `D${d.id}`, mastery: Math.round(avg), weight: d.weight };
+    return { domain: `D${d.id}`, mastery: averages.get(d.id) ?? 0, weight: d.weight };
   });
 
   // CISO score
@@ -76,7 +75,7 @@ export default function DashboardPage() {
   const promptIdx = daysSinceStart % MINDSET_PROMPTS.length;
 
   // Countdown color
-  const countdownColor = daysUntilExam > 28 ? "text-high" : daysUntilExam > 14 ? "text-warn" : daysUntilExam > 7 ? "text-med" : "text-danger";
+  const countdownColor = daysToShow > 28 ? "text-high" : daysToShow > 14 ? "text-warn" : daysToShow > 7 ? "text-med" : "text-danger";
 
   // Domain-imbalance and cramming warnings now come from detectStudySignals,
   // rendered by <NextUp /> alongside the other study-pattern signals.
@@ -88,8 +87,8 @@ export default function DashboardPage() {
       {/* Countdown hero */}
       <section aria-labelledby="countdown-heading" className="card mb-4 text-center py-5 md:py-8 shadow-glow border-2 border-accent">
         <h2 id="countdown-heading" className="text-dim text-xs uppercase tracking-wider font-medium">Days Until Exam</h2>
-        <p className={`text-6xl md:text-7xl font-bold ${countdownColor} my-1`} aria-label={`${daysUntilExam} days until exam`}>
-          {daysUntilExam}
+        <p className={`text-6xl md:text-7xl font-bold ${countdownColor} my-1`} aria-label={`${daysToShow} days until exam`}>
+          {daysToShow}
         </p>
         <p className="text-sm text-dim">
           Day {Math.min(56, daysSinceStart + 1)} of 56 · Week {currentWeek} · Day {currentDay}
