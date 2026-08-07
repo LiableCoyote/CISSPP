@@ -15,7 +15,6 @@ function profile(over: Partial<Profile> = {}): Profile {
     dailyGoalMinutes: 120,
     startDate: new Date().toISOString(),
     xp: 0,
-    level: 0,
     streak: 0,
     longestStreak: 0,
     streakFreezesUsedThisWeek: 0,

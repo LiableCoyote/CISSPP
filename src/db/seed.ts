@@ -22,6 +22,18 @@ export async function syncSeedContent() {
   const newCards = buildFlashcardSeed().filter((c) => !cardIds.has(c.id));
   if (newCards.length > 0) await db.flashcards.bulkAdd(newCards);
 
+  // Quests too. Without this, a quest added in a later release never reached
+  // existing users — and checkWeekClear counts whatever is in the database, so
+  // two people on the same build needed different quest counts to earn the same
+  // week-clear badge.
+  const questIds = new Set(await db.quests.toCollection().primaryKeys());
+  const newQuests: Quest[] = QUEST_SEEDS.filter((q) => !questIds.has(q.id)).map((q) => ({
+    ...q,
+    completedAt: null,
+    minutesLogged: 0,
+  }));
+  if (newQuests.length > 0) await db.quests.bulkAdd(newQuests);
+
   const questionIds = new Set(await db.questions.toCollection().primaryKeys());
   const newQuestions = ALL_QUESTIONS.filter((q) => !questionIds.has(q.id));
   if (newQuestions.length > 0) await db.questions.bulkAdd(newQuestions);
@@ -34,10 +46,10 @@ export async function syncSeedContent() {
   }));
   if (newResources.length > 0) await db.resources.bulkAdd(newResources);
 
-  const total = newCards.length + newQuestions.length + newResources.length;
+  const total = newCards.length + newQuests.length + newQuestions.length + newResources.length;
   if (total > 0) {
     console.log(
-      `✅ Synced new content: ${newCards.length} cards, ${newQuestions.length} questions, ${newResources.length} resources`,
+      `✅ Synced new content: ${newCards.length} cards, ${newQuests.length} quests, ${newQuestions.length} questions, ${newResources.length} resources`,
     );
   }
 }
@@ -61,7 +73,6 @@ export async function initializeDb() {
     dailyGoalMinutes: 120,
     startDate: now,
     xp: 0,
-    level: 0,
     streak: 0,
     longestStreak: 0,
     streakFreezesUsedThisWeek: 0,

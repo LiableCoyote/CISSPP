@@ -11,7 +11,6 @@ export interface Profile {
   dailyGoalMinutes: number;
   startDate: string;
   xp: number;
-  level: number;
   streak: number;
   longestStreak: number;
   streakFreezesUsedThisWeek: number;
@@ -206,6 +205,21 @@ class CissppDb extends Dexie {
     this.version(4).stores({
       snapshots: "id, createdAt",
     });
+    // v5: drop Profile.level. It was written in two places and read in none —
+    // every consumer derives the level from xp via xpToLevel — and it was
+    // already going stale whenever achievement XP crossed a threshold, because
+    // that path writes to Dexie directly. Stale values were also serialized
+    // into every backup.
+    this.version(5)
+      .stores({ profile: "id" })
+      .upgrade(async (tx) => {
+        await tx
+          .table("profile")
+          .toCollection()
+          .modify((p: Record<string, unknown>) => {
+            delete p.level;
+          });
+      });
   }
 }
 

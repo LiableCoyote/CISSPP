@@ -101,21 +101,37 @@ async function checkDomainMastery(attemptId: string) {
   if (attempt.domainId === 3 && attempt.scorePct >= 80) await tryUnlock("domain-master-d3");
 }
 
+const BOSS_2_PCT = 70;
+const BOSS_3_PCT = 75;
+
+/**
+ * Boss badges, gated on how many full-length exams have been finished.
+ *
+ * These used to fire on *any* full exam meeting the score, so a single 78% in
+ * week 4 unlocked all three at once and left weeks 6 and 7 with no reward. The
+ * plan intends one boss per checkpoint, but nothing links an attempt back to
+ * the quest that prompted it — attempts carry no quest id, and no screen
+ * launches a quiz from a quest — so gating on the actual week would mean
+ * inventing that link rather than fixing a defect.
+ *
+ * Ordinal is the honest approximation: the second exam can earn the second
+ * badge, the third the third. The achievement descriptions were reworded to
+ * say that, rather than promising week-gating the code does not do.
+ */
 async function checkBossFights(attemptId: string) {
   const attempt = await db.attempts.get(attemptId);
-  if (!attempt || attempt.mode !== "full") return;
+  if (!attempt || attempt.mode !== "full" || !attempt.finishedAt) return;
 
-  // Week 4 boss: completion is the bar.
-  const week4Exam = await db.quests
-    .where("week")
-    .equals(4)
-    .filter((q) => q.type === "exam")
-    .toArray();
-  if (week4Exam.some((q) => q.completedAt)) await tryUnlock("boss-1-pass");
+  const fullExams = (await db.attempts.where("mode").equals("full").toArray())
+    .filter((a) => a.finishedAt)
+    .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
 
-  // Week 6 boss: 70%+. Week 7: 75%+.
-  if (attempt.scorePct >= 70) await tryUnlock("boss-2-pass");
-  if (attempt.scorePct >= 75) await tryUnlock("boss-3-pass");
+  const ordinal = fullExams.findIndex((a) => a.id === attempt.id) + 1;
+  if (ordinal < 1) return;
+
+  if (ordinal >= 1) await tryUnlock("boss-1-pass");
+  if (ordinal >= 2 && attempt.scorePct >= BOSS_2_PCT) await tryUnlock("boss-2-pass");
+  if (ordinal >= 3 && attempt.scorePct >= BOSS_3_PCT) await tryUnlock("boss-3-pass");
 }
 
 async function checkFlashcardCounts(reviewedToday: number, totalDeck: number) {

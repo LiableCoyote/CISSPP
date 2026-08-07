@@ -13,7 +13,6 @@ function profileAt(startDaysAgo: number, examDate: string | null = null): Profil
     dailyGoalMinutes: 120,
     startDate: subDays(NOW, startDaysAgo).toISOString(),
     xp: 0,
-    level: 0,
     streak: 0,
     longestStreak: 0,
     streakFreezesUsedThisWeek: 0,

@@ -12,7 +12,7 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **Full-length exam simulation** (150 Q, 3 hr, hard no-back rule, CAT-style)
 - **Study analytics** — 30/90-day timeline, per-domain learning curves with 7-day movement, stalled-domain detection, 90-day heatmap, score trends, CISO Thinking Score
 - **Next Up recommendations** — ranks what to study next from your actual behaviour, plus signals for cramming, low-score runs, dormancy, and SRS backlog
-- **Gamification** — XP, 10 level titles, daily streak with freeze, 29 achievements across 8 categories with Common/Rare/Epic/Legendary difficulty tiers
+- **Gamification** — XP, 10 level titles, daily streak with freeze, 29 achievements across 8 categories with Common/Rare/Epic/Legendary difficulty tiers (all 29 reachable)
 - **Pace Board** — your standing against six reference study paces, scaled to your campaign week
 - **Study report** — printable summary (campaign, mastery, quiz history, achievements); save as PDF from the browser print dialog
 - **Share card** — PNG export with weekly deltas and a progress headline
@@ -20,6 +20,8 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **Mobile-first** — bottom nav, 48px tap targets, swipe gestures, safe-area support, haptic feedback
 - **PWA** — installs to home screen, works 100% offline after first load
 - **Accessible** — WCAG 2.1 AA: zero axe-core violations across all 12 routes; skip links, ARIA landmarks, keyboard-only operation, reduced-motion support
+- **Safe by default** — automatic snapshots before anything destructive, a confirmation step on import, and a validated backup format
+- **Truly offline** — fonts are bundled, not fetched; the app makes no third-party request at any point
 
 ## Local development
 
@@ -64,16 +66,27 @@ Because there's no backend, two things that look like social features aren't:
 - **Achievement tiers** (Common → Legendary) rate how hard a badge is to earn. They are not percentages of other users.
 - **The Pace Board** ranks you against named reference paces with defined weekly rates, not against real people.
 
-New seed content added in an update is backfilled into an existing database by id on next load, so your SRS progress, quiz history and streak survive upgrades.
+New seed content added in an update — cards, quests, questions and resources —
+is backfilled into an existing database by id on next load, so your SRS
+progress, quiz history and streak survive upgrades.
+
+Backups are versioned. Version 1 files still restore; version 2 adds vault-game
+wins and your reminder settings. The app also keeps the three most recent
+automatic snapshots (daily, and before any import or reset) so an accidental
+restore is undoable from **Settings → Backup & Restore**.
 
 ## Verification
 
 ```bash
 npm run lint          # ESLint — expected: 0 problems
-npx tsc --noEmit      # types
+npm run typecheck     # types (tsc -b)
 npm test              # Vitest unit suite
 npm run build         # production build
 ```
+
+> `npx tsc --noEmit` against the root config is a **no-op** — `tsconfig.json` is
+> solution-style (references only, no `include`), so it exits 0 without checking
+> anything. Use `npm run typecheck`.
 
 ### Browser QA
 
@@ -101,9 +114,14 @@ libraries are not installable in this environment.
 
 ### Tests
 
-`npm test` covers the pure logic: export/import (including every rejection
-path), analytics and signals, recommendations, quick-test generation, SM-2, and
-ISO week keys. No jsdom, no component tests — Dexie runs on `fake-indexeddb`.
+215 tests over the pure logic: export/import and every rejection path, analytics
+and study signals, recommendations, campaign/date helpers, quick-test
+generation, SM-2, XP levels, ISO week keys, guarded storage, seed idempotency
+and the achievement engine. No jsdom, no component tests — Dexie runs on
+`fake-indexeddb`.
+
+Anything time-dependent takes the clock as a parameter, so the suite does not
+change behaviour when it happens to run.
 
 ## Keyboard shortcuts
 

@@ -18,7 +18,6 @@ function handleLevelTransition(prev: Profile | null, next: Profile | null) {
   const nextLevel = xpToLevel(next.xp).level;
   if (nextLevel > prevLevel) {
     useLevelUp.getState().open(nextLevel);
-    db.profile.update(1, { level: nextLevel }).catch(() => {});
     void checkAchievements({ kind: "level-up", previousLevel: prevLevel, newLevel: nextLevel });
   }
   if (next.streak > prev.streak) {

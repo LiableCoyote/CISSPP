@@ -36,7 +36,6 @@ const profile: Profile = {
   dailyGoalMinutes: 120,
   startDate: iso(30),
   xp: 3000,
-  level: 2,
   streak: 5,
   longestStreak: 9,
   streakFreezesUsedThisWeek: 0,
