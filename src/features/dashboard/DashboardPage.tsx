@@ -7,15 +7,13 @@ import { campaignPosition, daysUntilExam, domainAverages } from "../../lib/campa
 import { WEEK_META } from "../../data/weeks";
 import { xpToLevel, LEVEL_XP_THRESHOLDS } from "../../lib/xp";
 import { format, parseISO } from "date-fns";
-import { lazy, Suspense } from "react";
+import MasteryRadar from "./MasteryRadar";
 import InstallPrompt from "../../components/InstallPrompt";
 import { ACHIEVEMENT_DEFS } from "../../data/achievements";
 import ShareCard from "../stats/ShareCard";
 import NextUp from "./NextUp";
 
-// Recharts' polar bundle is ~97KB — keep it off the landing page's critical path.
-const MasteryRadar = lazy(() => import("./MasteryRadar"));
-
+// MasteryRadar is now plain SVG, so there is nothing heavy left to defer.
 const MINDSET_PROMPTS = [
   "Would a CISO patch the server, or update the policy first?",
   "You can't pick technical over governance. Always.",
@@ -219,9 +217,7 @@ export default function DashboardPage() {
         <section aria-labelledby="mastery-heading" className="card mb-4">
           <h3 id="mastery-heading" className="font-semibold mb-2">Domain Mastery</h3>
           <div role="img" aria-label={`Domain mastery chart: ${radarData.map(r => `${r.domain} ${r.mastery}%`).join(", ")}`}>
-            <Suspense fallback={<div className="h-[240px]" aria-hidden="true" />}>
-              <MasteryRadar data={radarData} />
-            </Suspense>
+            <MasteryRadar data={radarData} />
           </div>
         </section>
       )}

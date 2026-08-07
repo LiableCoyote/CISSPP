@@ -48,7 +48,7 @@ export default function SettingsPage() {
           setReminderEnabled(true);
           new Notification("CISSPP Reminders Enabled", {
             body: `You'll be reminded at ${reminderTime} daily.`,
-            icon: "/icons/icon-192.png",
+            icon: new URL("icons/icon-192.png", document.baseURI).href,
           });
         } else {
           setImportStatus("Notification permission denied.");

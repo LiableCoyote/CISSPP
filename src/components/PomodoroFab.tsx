@@ -14,7 +14,7 @@ const BREAK_SECONDS = 5 * 60;
 function notify(title: string, body: string) {
   try {
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(title, { body, icon: "/icons/icon-192.png" });
+      new Notification(title, { body, icon: new URL("icons/icon-192.png", document.baseURI).href });
     }
   } catch (err) {
     console.warn("Notification failed:", err);

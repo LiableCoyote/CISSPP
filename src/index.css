@@ -1,3 +1,21 @@
+/*
+ * Self-hosted fonts. These used to come from Google Fonts with a CacheFirst
+ * runtime rule, which only populates after a successful online fetch — so a
+ * user who installed the PWA and went offline never got them, in an app whose
+ * whole premise is working offline. Bundling them also drops a third-party
+ * request on every online load.
+ *
+ * Latin subset only, and only the weights the design uses — the full
+ * @fontsource package ships every subset and would put 36 files in the
+ * precache instead of 6.
+ */
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/inter/latin-700.css";
+@import "@fontsource/jetbrains-mono/latin-400.css";
+@import "@fontsource/jetbrains-mono/latin-500.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
