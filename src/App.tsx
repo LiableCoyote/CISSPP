@@ -1,10 +1,12 @@
 import { useEffect, useState, Suspense, lazy } from "react";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
 import { initializeDb } from "./db/seed";
 import { maybeDailySnapshot } from "./lib/snapshots";
 import { useProfile } from "./state/profile";
 import Layout from "./components/layout/Layout";
 import ErrorBoundary from "./components/ErrorBoundary";
+import RouteErrorBoundary from "./components/RouteErrorBoundary";
+import UpdatePrompt from "./components/UpdatePrompt";
 import PomodoroFab from "./components/PomodoroFab";
 
 const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage"));
@@ -58,6 +60,19 @@ function StartupError({ message }: { message: string }) {
   );
 }
 
+/**
+ * Suspense + a per-route error boundary, keyed on location so navigating away
+ * from a broken route clears the error.
+ */
+function RoutedArea({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  return (
+    <RouteErrorBoundary routeKey={location.pathname}>
+      <Suspense fallback={<LoadingScreen />}>{children}</Suspense>
+    </RouteErrorBoundary>
+  );
+}
+
 function App() {
   const { initProfile, loading } = useProfile();
   const [startupError, setStartupError] = useState<string | null>(null);
@@ -81,6 +96,7 @@ function App() {
 
   return (
     <ErrorBoundary>
+      <UpdatePrompt />
       <HashRouter>
         <Routes>
           {/* Immersive routes — no layout chrome */}
@@ -106,7 +122,7 @@ function App() {
             path="*"
             element={
               <Layout>
-                <Suspense fallback={<LoadingScreen />}>
+                <RoutedArea>
                   <Routes>
                     <Route path="/" element={<DashboardPage />} />
                     <Route path="/plan" element={<CampaignPage />} />
@@ -126,7 +142,7 @@ function App() {
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="*" element={<div className="page text-center text-dim">404 · Page not found</div>} />
                   </Routes>
-                </Suspense>
+                </RoutedArea>
                 <PomodoroFab />
               </Layout>
             }

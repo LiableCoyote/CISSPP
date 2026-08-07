@@ -9,7 +9,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      // "prompt", not "autoUpdate". autoUpdate calls skipWaiting/clientsClaim, so a
+      // deploy activated the new worker under the running app and Workbox deleted the
+      // old precache — the next lazy route then failed its content-hashed import and
+      // the user got the generic crash screen. With "prompt" the new worker waits, the
+      // old chunks keep resolving, and the reload happens when the user agrees to it.
+      registerType: "prompt",
       includeAssets: [
         "favicon.svg",
         "icons/apple-touch-icon.png",
