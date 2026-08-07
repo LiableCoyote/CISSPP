@@ -138,6 +138,19 @@ export interface VaultWin {
   lastWonAt: string;
 }
 
+/**
+ * Automatic point-in-time backup, kept so an accidental import or reset is
+ * recoverable without the user having remembered to export first.
+ */
+export interface Snapshot {
+  id: string;
+  createdAt: string;
+  reason: "daily" | "pre-import" | "pre-reset";
+  /** Serialized exportData() payload. */
+  payload: string;
+  sizeBytes: number;
+}
+
 // Resolved once at module load — switching profiles requires a page reload.
 // Must not throw: this runs before React mounts, so an unguarded storage error
 // would leave a blank page that ErrorBoundary can never catch.
@@ -156,6 +169,7 @@ class CissppDb extends Dexie {
   notes!: Table<AppNote, string>;
   resources!: Table<ResourceState, string>;
   vaultWins!: Table<VaultWin, string>;
+  snapshots!: Table<Snapshot, string>;
 
   constructor() {
     super("cisspp-" + _activeSlot);
@@ -186,6 +200,11 @@ class CissppDb extends Dexie {
     // achievement. New store only — no data migration needed.
     this.version(3).stores({
       vaultWins: "gameId",
+    });
+    // v4: automatic snapshots. Deliberately NOT part of the backup payload —
+    // a backup containing its own history would grow without bound.
+    this.version(4).stores({
+      snapshots: "id, createdAt",
     });
   }
 }

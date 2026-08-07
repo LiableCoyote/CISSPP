@@ -1,39 +1,15 @@
 import { db } from "../db/schema";
+import { getItem, setItem } from "./safeStorage";
 
-export async function exportData() {
-  const [profile, domains, quests, flashcards, questions, attempts, answers, studyLog, achievements, notes, resources] =
-    await Promise.all([
-      db.profile.toArray(),
-      db.domains.toArray(),
-      db.quests.toArray(),
-      db.flashcards.toArray(),
-      db.questions.toArray(),
-      db.attempts.toArray(),
-      db.answers.toArray(),
-      db.studyLog.toArray(),
-      db.achievements.toArray(),
-      db.notes.toArray(),
-      db.resources.toArray(),
-    ]);
-
-  return {
-    version: EXPORT_VERSION,
-    exportedAt: new Date().toISOString(),
-    profile,
-    domains,
-    quests,
-    flashcards,
-    questions,
-    attempts,
-    answers,
-    studyLog,
-    achievements,
-    notes,
-    resources,
-  };
-}
-
-export const EXPORT_VERSION = 1;
+/**
+ * v2 adds the `vaultWins` store and a `settings` block.
+ *
+ * v1 files remain readable: `vaultWins` and `settings` are simply absent, and
+ * the restore treats them as empty. Rejecting v1 here would strand every backup
+ * a user has already downloaded.
+ */
+export const EXPORT_VERSION = 2;
+const OLDEST_READABLE_VERSION = 1;
 
 /** Table names carried in a backup, in the order they are restored. */
 const BACKUP_TABLES = [
@@ -48,10 +24,37 @@ const BACKUP_TABLES = [
   "achievements",
   "notes",
   "resources",
+  "vaultWins",
 ] as const;
 
+/** localStorage keys worth carrying across devices. Slot-scoped keys are not. */
+const SETTINGS_KEYS = ["cisspp-reminder-enabled", "cisspp-reminder-time"] as const;
+
 type BackupTable = (typeof BACKUP_TABLES)[number];
-type Backup = { version: number } & Record<BackupTable, unknown[]>;
+type Backup = { version: number; settings?: Record<string, string> } & Record<
+  BackupTable,
+  unknown[]
+>;
+
+export async function exportData() {
+  const tables = await Promise.all(BACKUP_TABLES.map((name) => db.table(name).toArray()));
+
+  const settings: Record<string, string> = {};
+  for (const key of SETTINGS_KEYS) {
+    const value = getItem(key);
+    if (value !== null) settings[key] = value;
+  }
+
+  const payload: Record<string, unknown> = {
+    version: EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    settings,
+  };
+  BACKUP_TABLES.forEach((name, i) => {
+    payload[name] = tables[i];
+  });
+  return payload;
+}
 
 /**
  * Checks a parsed backup before anything touches the database.
@@ -67,10 +70,12 @@ export function validateBackup(data: unknown): asserts data is Backup {
   }
 
   const obj = data as Record<string, unknown>;
+  const version = obj.version;
 
-  if (obj.version !== EXPORT_VERSION) {
+  if (typeof version !== "number" || version < OLDEST_READABLE_VERSION || version > EXPORT_VERSION) {
     throw new Error(
-      `Unsupported export version ${String(obj.version)} — this app reads version ${EXPORT_VERSION}.`,
+      `Unsupported export version ${String(version)} — this app reads versions ` +
+        `${OLDEST_READABLE_VERSION} to ${EXPORT_VERSION}.`,
     );
   }
 
@@ -81,12 +86,27 @@ export function validateBackup(data: unknown): asserts data is Backup {
     }
   }
 
+  if (
+    obj.settings !== undefined &&
+    (typeof obj.settings !== "object" || obj.settings === null || Array.isArray(obj.settings))
+  ) {
+    throw new Error(`Backup is malformed: "settings" should be an object.`);
+  }
+
   const totalRows = BACKUP_TABLES.reduce(
     (sum, table) => sum + (Array.isArray(obj[table]) ? (obj[table] as unknown[]).length : 0),
     0,
   );
   if (totalRows === 0) {
     throw new Error("Backup is empty — refusing to replace your data with nothing.");
+  }
+
+  // A backup with no profile row imports "successfully" and then vanishes: the
+  // reload finds no profile, initializeDb treats it as a fresh install, and
+  // re-seeds over the top. Reject it rather than silently discarding the file.
+  const profile = obj.profile;
+  if (!Array.isArray(profile) || profile.length !== 1) {
+    throw new Error("Backup is missing its profile — this doesn't look like a CISSPP export.");
   }
 }
 
@@ -114,4 +134,13 @@ export async function importData(json: string) {
       }
     }
   });
+
+  // Settings live in localStorage, outside the transaction. Applied last so a
+  // failed restore doesn't leave them pointing at data that was rolled back.
+  if (data.settings) {
+    for (const key of SETTINGS_KEYS) {
+      const value = data.settings[key];
+      if (typeof value === "string") setItem(key, value);
+    }
+  }
 }

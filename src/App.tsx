@@ -1,6 +1,7 @@
 import { useEffect, useState, Suspense, lazy } from "react";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { initializeDb } from "./db/seed";
+import { maybeDailySnapshot } from "./lib/snapshots";
 import { useProfile } from "./state/profile";
 import Layout from "./components/layout/Layout";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -67,6 +68,8 @@ function App() {
     // sees a rejected promise.
     initializeDb()
       .then(() => initProfile())
+      // Best-effort and non-blocking: a snapshot must never delay startup.
+      .then(() => maybeDailySnapshot().catch((err) => console.error("Daily snapshot:", err)))
       .catch((err: unknown) => {
         console.error("Startup failed:", err);
         setStartupError(err instanceof Error ? err.message : "Unknown error");

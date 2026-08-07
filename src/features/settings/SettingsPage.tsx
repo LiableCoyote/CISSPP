@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { format, parseISO } from "date-fns";
 import { useProfile } from "../../state/profile";
+import { createSnapshot, listSnapshots, restoreSnapshot } from "../../lib/snapshots";
 import { db } from "../../db/schema";
 import { exportData, importData } from "../../lib/export";
 import { downloadJSON } from "../../lib/download";
@@ -20,6 +23,8 @@ export default function SettingsPage() {
   });
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [resetConfirm, setResetConfirm] = useState(false);
+  const [pendingImport, setPendingImport] = useState<File | null>(null);
+  const snapshots = useLiveQuery(() => listSnapshots()) || [];
 
   if (!profile) return null;
 
@@ -68,14 +73,41 @@ export default function SettingsPage() {
 
   const doImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // Clear the input so picking the same file twice still fires onChange.
+    e.target.value = "";
     if (!file) return;
+
+    // Import replaces everything. It used to run on a single tap while the far
+    // less likely "Reset" had a two-tap confirm — hold the file and confirm.
+    setPendingImport(file);
+    setImportStatus(null);
+  };
+
+  const confirmImport = async () => {
+    const file = pendingImport;
+    if (!file) return;
+    setPendingImport(null);
+    setImportStatus("Saving a snapshot first…");
     try {
       const text = await file.text();
+      // Snapshot before the destructive write, so this is undoable.
+      await createSnapshot("pre-import");
       await importData(text);
       setImportStatus("✓ Imported. Reloading…");
       setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
       setImportStatus(`✗ Import failed: ${err instanceof Error ? err.message : "unknown"}`);
+    }
+  };
+
+  const doRestoreSnapshot = async (id: string) => {
+    setImportStatus("Restoring…");
+    try {
+      await restoreSnapshot(id);
+      setImportStatus("✓ Restored. Reloading…");
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      setImportStatus(`✗ Restore failed: ${err instanceof Error ? err.message : "unknown"}`);
     }
   };
 
@@ -102,6 +134,8 @@ export default function SettingsPage() {
       return;
     }
     // Never delete without a backup in hand — if the export fails, stop.
+    // The snapshot is in-database and dies with db.delete(), so the downloaded
+    // file is the one that actually survives a reset.
     try {
       const data = await exportData();
       downloadJSON(data, `cisspp-pre-reset-backup-${Date.now()}.json`);
@@ -226,13 +260,70 @@ export default function SettingsPage() {
         <button onClick={doExport} className="btn-outline w-full mb-2">
           📥 Export All Data (JSON)
         </button>
-        <label className="btn-outline w-full mb-2 cursor-pointer block text-center">
-          📤 Import Backup
-          <input type="file" accept="application/json" onChange={doImport} className="hidden" />
-        </label>
+
+        {pendingImport ? (
+          <div className="rounded-lg border border-danger/40 bg-danger/5 p-3 mb-2" role="alert">
+            <p className="text-sm font-semibold text-danger">
+              <span aria-hidden="true">⚠ </span>This replaces everything
+            </p>
+            <p className="text-xs text-dim mt-1">
+              Importing <span className="text-ink">{pendingImport.name}</span> will replace all of
+              your current study data. A snapshot is saved first, so you can undo it below.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => setPendingImport(null)} className="btn-ghost flex-1 text-sm">
+                Cancel
+              </button>
+              <button onClick={confirmImport} className="btn-danger flex-1 text-sm">
+                Replace my data
+              </button>
+            </div>
+          </div>
+        ) : (
+          <label className="btn-outline w-full mb-2 cursor-pointer block text-center">
+            📤 Import Backup
+            <input type="file" accept="application/json" onChange={doImport} className="hidden" />
+          </label>
+        )}
+
         <p className="text-xs text-dim">
           Export your data before switching devices or clearing browser storage.
         </p>
+
+        {snapshots.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-border">
+            <h4 className="text-xs uppercase tracking-wider text-dim mb-2">Automatic snapshots</h4>
+            <ul className="space-y-2" role="list">
+              {snapshots.map((s) => (
+                <li key={s.id} className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">
+                      {format(parseISO(s.createdAt), "MMM d, HH:mm")}
+                      <span className="text-xs text-dim ml-2">
+                        {s.reason === "daily"
+                          ? "daily"
+                          : s.reason === "pre-import"
+                            ? "before import"
+                            : "before reset"}
+                      </span>
+                    </p>
+                    <p className="text-[11px] text-dim">{Math.round(s.sizeBytes / 1024)} KB</p>
+                  </div>
+                  <button
+                    onClick={() => doRestoreSnapshot(s.id)}
+                    className="btn-ghost text-xs shrink-0"
+                  >
+                    Restore
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-dim mt-2">
+              Taken automatically once a day and before anything destructive. The newest{" "}
+              {snapshots.length === 1 ? "one is" : `${snapshots.length} are`} kept.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="card border-danger/40 bg-danger/5">
