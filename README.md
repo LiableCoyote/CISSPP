@@ -34,7 +34,7 @@ npm run preview    # preview production build
 
 ## Deploying to GitHub Pages
 
-A workflow in `.github/workflows/deploy.yml` auto-deploys on push to `main`:
+A workflow in `.github/workflows/deploy.yml` auto-deploys on push, once CI passes:
 
 1. Go to **Settings → Pages → Build and deployment**
 2. Set **Source** to **GitHub Actions**
@@ -108,17 +108,34 @@ Both accept `--browser=chromium|firefox`. Point them elsewhere with
 `QA_BASE_URL`. Avoid ports on the [WHATWG bad-port list](https://fetch.spec.whatwg.org/#port-blocking)
 — 4190 and similar are refused by browsers outright and look like an app hang.
 
-**Verified in Chromium 141 and Firefox 153**: 36 route/viewport combinations
-clean, zero axe violations. WebKit is skipped with a message — its host
-libraries are not installable in this environment.
+Locally the scripts run against Chromium and Firefox. **WebKit is skipped with
+a message** — its host libraries can't be installed in this dev container — but
+it *does* run in CI, which is the only place it can.
+
+## CI
+
+`.github/workflows/ci.yml` runs on every pull request, and on every push via
+`deploy.yml`, which will not ship unless it passes:
+
+- lint, typecheck and the full unit suite
+- route and accessibility sweeps across **Chromium, Firefox and WebKit**
+
+Typecheck is its own step rather than riding on `npm run build`. If the build
+script were ever simplified to plain `vite build`, typechecking would otherwise
+disappear from CI with no other signal.
+
+Node is pinned by `.nvmrc` and the `engines` field so local and CI can't drift.
+`--legacy-peer-deps` is required, not cosmetic: `vite-plugin-pwa@1` declares
+`vite ^3||^4||^5||^6||^7` while this project is on Vite 8. Retire the flag when
+that upstream range catches up.
 
 ### Tests
 
-215 tests over the pure logic: export/import and every rejection path, analytics
+221 tests over the pure logic: export/import and every rejection path, analytics
 and study signals, recommendations, campaign/date helpers, quick-test
 generation, SM-2, XP levels, ISO week keys, guarded storage, seed idempotency
-and the achievement engine. No jsdom, no component tests — Dexie runs on
-`fake-indexeddb`.
+snapshots and the achievement engine. No jsdom, no component tests — Dexie
+runs on `fake-indexeddb`.
 
 Anything time-dependent takes the clock as a parameter, so the suite does not
 change behaviour when it happens to run.

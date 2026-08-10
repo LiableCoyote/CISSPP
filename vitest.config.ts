@@ -5,7 +5,9 @@ import { defineConfig } from "vitest/config";
 // function or a Dexie call backed by fake-indexeddb.
 export default defineConfig({
   test: {
-    include: ["src/**/*.test.ts"],
+    // .tsx too: the glob used to match only .test.ts, so a component
+    // test would have been silently skipped with no error.
+    include: ["src/**/*.test.{ts,tsx}"],
     environment: "node",
   },
 });

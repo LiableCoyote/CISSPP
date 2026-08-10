@@ -1,4 +1,5 @@
 import http from "node:http";
+import { existsSync } from "node:fs";
 import { chromium, firefox, webkit } from "playwright";
 
 export const BASE = process.env.QA_BASE_URL || "http://127.0.0.1:4173";
@@ -25,16 +26,20 @@ export const VIEWPORTS = [
 ];
 
 /**
- * Launch config per engine in this environment.
+ * Launch config per engine.
  *
- * chromium needs an explicit path — playwright's default points at a build
- * number that isn't installed here. firefox works off the default. webkit is
- * present but cannot start: its host libraries are missing.
+ * The dev container ships a Chromium whose build number doesn't match what
+ * Playwright expects, so the default executable path misses and it has to be
+ * pointed at the installed one. CI installs browsers normally, where that path
+ * doesn't exist — so use it only when it does, and otherwise let Playwright
+ * resolve its own.
  */
+const LOCAL_CHROMIUM = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+
 const ENGINES = {
   chromium: {
     type: chromium,
-    options: { executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" },
+    options: existsSync(LOCAL_CHROMIUM) ? { executablePath: LOCAL_CHROMIUM } : {},
   },
   firefox: { type: firefox, options: {} },
   webkit: { type: webkit, options: {} },
@@ -51,7 +56,10 @@ export async function launch(name) {
   try {
     return await engine.type.launch(engine.options);
   } catch (err) {
-    if (name === "webkit") {
+    // WebKit's host libraries can't be installed in the dev container. Skipping
+    // is right there, but never in CI — that is the one place it can run, and a
+    // silent skip would defeat the point of adding it.
+    if (name === "webkit" && !process.env.CI) {
       console.log("SKIP  webkit — host libraries are not available in this environment.");
       return null;
     }
@@ -65,9 +73,9 @@ export async function launch(name) {
  * describe the modal rather than the page.
  */
 export async function newSeededPage(browser, viewport) {
-  // Service workers are blocked so runs are deterministic: the app registers
-  // one with registerType "autoUpdate", and its reload races the first
-  // navigation — Firefox surfaces that as "interrupted by another navigation".
+  // Service workers are blocked so runs are deterministic — a worker activating
+  // mid-sweep would race the first navigation, which Firefox reports as
+  // "interrupted by another navigation".
   const ctx = await browser.newContext({ viewport, serviceWorkers: "block" });
   const page = await ctx.newPage();
   await page.addInitScript(() => localStorage.setItem("cisspp-onboarded-default", "1"));

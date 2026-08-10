@@ -1,0 +1,94 @@
+name: CI
+
+# Pull requests run this directly; pushes reach it through deploy.yml, which
+# calls it and will not ship unless it passes. Deliberately no `push:` trigger
+# here — that would run everything twice on every push.
+#
+# Before this existed, nothing ran on PRs at all, and the only check that
+# reached CI was typechecking, and only as a side effect of `npm run build`
+# being `tsc -b && vite build`.
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Lint, types, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # --legacy-peer-deps is required, not cosmetic: vite-plugin-pwa@1 declares
+      # vite ^3||^4||^5||^6||^7 and this project is on vite 8.
+      - run: npm ci --legacy-peer-deps
+
+      - run: npm run lint
+
+      # Its own step rather than riding on the build. Anyone "speeding up" the
+      # build script to plain `vite build` would otherwise silently remove
+      # typechecking from CI.
+      - run: npm run typecheck
+
+      - run: npm test
+
+  browser:
+    name: Routes and a11y (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --legacy-peer-deps
+
+      # WebKit has never been runnable locally — its host libraries cannot be
+      # installed in the dev container, so scripts/qa-lib.mjs skips it there.
+      # The runners can install it, which closes that coverage gap.
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - run: npm run build
+
+      # Serve and test in one step so the background server is guaranteed to
+      # outlive the thing using it.
+      #
+      # The wait polls with node:http rather than fetch: undici applies proxy
+      # configuration and rejects plain loopback URLs. Port 4173 is deliberate —
+      # keep off the WHATWG bad-port list, where browsers refuse the connection
+      # outright and it presents as an app hang.
+      - name: Route and accessibility sweeps
+        run: |
+          npx vite preview --port 4173 --strictPort &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+
+          node -e '
+            const http = require("node:http");
+            const deadline = Date.now() + 60000;
+            (function poll() {
+              http.get("http://127.0.0.1:4173/", (res) => { res.resume(); process.exit(0); })
+                .on("error", () => {
+                  if (Date.now() > deadline) { console.error("preview never came up"); process.exit(1); }
+                  setTimeout(poll, 500);
+                });
+            })();
+          '
+
+          node scripts/qa-routes.mjs --browser=${{ matrix.browser }}
+          node scripts/qa-a11y.mjs --browser=${{ matrix.browser }}
