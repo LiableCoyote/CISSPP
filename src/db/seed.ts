@@ -1,11 +1,44 @@
 import { db } from "./schema";
-import { DOMAINS } from "../data/domains";
-import { QUEST_SEEDS } from "../data/weeks";
-import { buildFlashcardSeed } from "../data/flashcards.seed";
-import { ALL_QUESTIONS } from "../data/questions.seed";
-import { RESOURCES } from "../data/resources";
 import { getWeekKey } from "../lib/streak";
+import { getItem, setItem } from "../lib/safeStorage";
+import { getActiveSlotId } from "../lib/profiles";
 import type { Profile, Quest } from "./schema";
+
+/**
+ * Bump whenever the shipped seed content changes — new cards, quests, questions
+ * or resources. It is what lets a returning user skip the backfill entirely.
+ * Forgetting to bump it means new content does not reach existing users, which
+ * is exactly the failure the quest backfill was added to fix, so treat it as
+ * part of adding content rather than as an optimisation knob.
+ */
+export const CONTENT_VERSION = 1;
+
+/**
+ * Per-slot, not global. Each profile slot is a separate IndexedDB database, so
+ * a shared key would let slot A's sync mark the content applied for slot B,
+ * which was seeded at an older version and would then never receive it.
+ */
+const appliedVersionKey = () => `cisspp-content-version-${getActiveSlotId()}`;
+
+/**
+ * Loaded on demand rather than imported at the top of the module.
+ *
+ * This file is reachable from App.tsx, so a static import put the entire
+ * question bank, flashcard deck and resource list into the entry chunk — a
+ * couple of hundred KB parsed before the first paint, on every launch, to
+ * support a backfill that usually has nothing to do.
+ */
+async function loadSeedData() {
+  const [{ DOMAINS }, { QUEST_SEEDS }, { buildFlashcardSeed }, { ALL_QUESTIONS }, { RESOURCES }] =
+    await Promise.all([
+      import("../data/domains"),
+      import("../data/weeks"),
+      import("../data/flashcards.seed"),
+      import("../data/questions.seed"),
+      import("../data/resources"),
+    ]);
+  return { DOMAINS, QUEST_SEEDS, buildFlashcardSeed, ALL_QUESTIONS, RESOURCES };
+}
 
 /**
  * Adds content shipped after the user's DB was first seeded. Only inserts rows
@@ -13,10 +46,13 @@ import type { Profile, Quest } from "./schema";
  * are never touched.
  *
  * Exported for tests: that idempotency claim is the whole contract, and it was
- * previously unreachable from outside initializeDb.
+ * previously unreachable from outside initializeDb. Deliberately does no
+ * version gating of its own — calling it always performs the id diff, so the
+ * contract the tests assert is the one callers get.
  */
 export async function syncSeedContent() {
   const now = new Date().toISOString();
+  const { QUEST_SEEDS, buildFlashcardSeed, ALL_QUESTIONS, RESOURCES } = await loadSeedData();
 
   const cardIds = new Set(await db.flashcards.toCollection().primaryKeys());
   const newCards = buildFlashcardSeed().filter((c) => !cardIds.has(c.id));
@@ -47,7 +83,7 @@ export async function syncSeedContent() {
   if (newResources.length > 0) await db.resources.bulkAdd(newResources);
 
   const total = newCards.length + newQuests.length + newQuestions.length + newResources.length;
-  if (total > 0) {
+  if (total > 0 && import.meta.env.DEV) {
     console.log(
       `✅ Synced new content: ${newCards.length} cards, ${newQuests.length} quests, ${newQuestions.length} questions, ${newResources.length} resources`,
     );
@@ -57,10 +93,22 @@ export async function syncSeedContent() {
 export async function initializeDb() {
   const existingProfile = await db.profile.get(1);
   if (existingProfile) {
+    // The common case: a returning user on the build they last ran. There is by
+    // definition nothing to backfill, so return before loadSeedData() is ever
+    // called and the seed chunk stays unfetched.
+    //
+    // If storage is blocked, getItem returns null and the sync runs — the guard
+    // degrades to the old, slower, always-correct behaviour rather than to
+    // silently skipping content.
+    if (getItem(appliedVersionKey()) === String(CONTENT_VERSION)) return;
     await syncSeedContent();
+    // Only after a successful sync: a throw above must leave the version unset
+    // so the next launch tries again.
+    setItem(appliedVersionKey(), String(CONTENT_VERSION));
     return;
   }
 
+  const { DOMAINS, QUEST_SEEDS, buildFlashcardSeed, ALL_QUESTIONS, RESOURCES } = await loadSeedData();
   const now = new Date().toISOString();
   const examDateDefault = new Date();
   examDateDefault.setDate(examDateDefault.getDate() + 56);
@@ -112,5 +160,7 @@ export async function initializeDb() {
   }));
   await db.resources.bulkAdd(resourceStates);
 
-  console.log("✅ Database initialized");
+  setItem(appliedVersionKey(), String(CONTENT_VERSION));
+
+  if (import.meta.env.DEV) console.log("✅ Database initialized");
 }

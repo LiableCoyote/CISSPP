@@ -19,6 +19,8 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **Pomodoro FAB** that logs focus minutes automatically
 - **Mobile-first** — bottom nav, 48px tap targets, swipe gestures, safe-area support, haptic feedback
 - **PWA** — installs to home screen, works 100% offline after first load
+- **Fast to start** — 290KB entry chunk; the question bank, flashcard deck and
+  vault tables load on demand, not before the first paint
 - **Accessible** — WCAG 2.1 AA: zero axe-core violations across all 12 routes; skip links, ARIA landmarks, keyboard-only operation, reduced-motion support
 - **Safe by default** — automatic snapshots before anything destructive, a confirmation step on import, and a validated backup format
 - **Truly offline** — fonts are bundled, not fetched; the app makes no third-party request at any point
@@ -69,6 +71,12 @@ Because there's no backend, two things that look like social features aren't:
 New seed content added in an update — cards, quests, questions and resources —
 is backfilled into an existing database by id on next load, so your SRS
 progress, quiz history and streak survive upgrades.
+
+The backfill is gated on `CONTENT_VERSION` in `src/db/seed.ts`, recorded per
+profile slot. **Bump it whenever you change seed content** — if you don't, the
+new rows never reach anyone who already has a database. If storage is blocked
+the gate reads as unset and the backfill simply runs, so the failure mode is a
+slower launch, not missing content.
 
 Backups are versioned. Version 1 files still restore; version 2 adds vault-game
 wins and your reminder settings. The app also keeps the three most recent

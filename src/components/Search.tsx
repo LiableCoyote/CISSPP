@@ -2,10 +2,36 @@ import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../db/schema";
-import { ALL_QUESTIONS } from "../data/questions.seed";
-import { RESOURCES } from "../data/resources";
-import { VAULT_TABLES } from "../data/vault";
-import { DOMAINS } from "../data/domains";
+
+/**
+ * The four static data sets are loaded on first open, not imported.
+ *
+ * Layout mounts this component unconditionally, so a static import put the
+ * question bank, vault tables, resource list and domain list into the entry
+ * chunk — a couple of hundred KB on the landing route, for a feature behind
+ * Cmd+K that many sessions never touch.
+ */
+type SearchIndex = {
+  questions: { id: string; prompt: string; domainId: number }[];
+  vaultTables: { id: string; title: string; intro: string; rows: string[][] }[];
+  resources: { id: string; title: string; description: string }[];
+  domains: { id: number; name: string; weight: number; priority: string }[];
+};
+
+async function loadSearchIndex(): Promise<SearchIndex> {
+  const [{ ALL_QUESTIONS }, { VAULT_TABLES }, { RESOURCES }, { DOMAINS }] = await Promise.all([
+    import("../data/questions.seed"),
+    import("../data/vault"),
+    import("../data/resources"),
+    import("../data/domains"),
+  ]);
+  return {
+    questions: ALL_QUESTIONS,
+    vaultTables: VAULT_TABLES,
+    resources: RESOURCES,
+    domains: DOMAINS,
+  };
+}
 
 type Hit = {
   id: string;
@@ -32,6 +58,11 @@ export default function Search() {
   const flashcards = useLiveQuery(() => db.flashcards.toArray(), []);
   const notes = useLiveQuery(() => db.notes.toArray(), []);
 
+  const [index, setIndex] = useState<SearchIndex | null>(null);
+  // A ref, not state: two rapid opens must not fire two fetches, and the guard
+  // has to be readable synchronously within the same tick.
+  const indexRequested = useRef(false);
+
   // Resetting here rather than in an effect keyed on `open` keeps the state
   // change in the event that caused it.
   const openSearch = useCallback(() => {
@@ -39,6 +70,19 @@ export default function Search() {
     setActiveIdx(0);
     setOpen(true);
     setTimeout(() => inputRef.current?.focus(), 30);
+
+    // Kick off the fetch as the dialog opens. The user has to type two
+    // characters before any of it is consulted, which is far longer than the
+    // load takes — and on a failure the Dexie-backed categories still work.
+    if (!indexRequested.current) {
+      indexRequested.current = true;
+      loadSearchIndex()
+        .then(setIndex)
+        .catch((err: unknown) => {
+          console.error("Search index failed to load:", err);
+          indexRequested.current = false;
+        });
+    }
   }, []);
 
   // Cmd/Ctrl+K to open
@@ -70,7 +114,7 @@ export default function Search() {
     if (q.length < 2) return [];
     const out: Hit[] = [];
 
-    DOMAINS.filter((d) => matches(d.name, q)).slice(0, MAX_PER_CATEGORY).forEach((d) =>
+    (index?.domains ?? []).filter((d) => matches(d.name, q)).slice(0, MAX_PER_CATEGORY).forEach((d) =>
       out.push({
         id: `dom-${d.id}`,
         label: `D${d.id}: ${d.name}`,
@@ -106,7 +150,7 @@ export default function Search() {
         })
       );
 
-    ALL_QUESTIONS.filter((qq) => matches(qq.prompt, q))
+    (index?.questions ?? []).filter((qq) => matches(qq.prompt, q))
       .slice(0, MAX_PER_CATEGORY)
       .forEach((qq) =>
         out.push({
@@ -118,7 +162,7 @@ export default function Search() {
         })
       );
 
-    VAULT_TABLES.filter(
+    (index?.vaultTables ?? []).filter(
       (t) =>
         matches(t.title, q) ||
         matches(t.intro, q) ||
@@ -135,7 +179,7 @@ export default function Search() {
         })
       );
 
-    RESOURCES.filter((r) => matches(r.title, q) || matches(r.description, q))
+    (index?.resources ?? []).filter((r) => matches(r.title, q) || matches(r.description, q))
       .slice(0, MAX_PER_CATEGORY)
       .forEach((r) =>
         out.push({
@@ -161,7 +205,7 @@ export default function Search() {
       );
 
     return out;
-  }, [query, quests, flashcards, notes]);
+  }, [query, quests, flashcards, notes, index]);
 
   // Derived rather than stored: when the hit list shrinks under the cursor the
   // clamp applies on the same render, instead of after an extra effect pass
@@ -233,8 +277,12 @@ export default function Search() {
               Type at least 2 characters. Navigate with ↑ / ↓, open with Enter.
             </div>
           )}
+          {/* "No matches" would be a lie while the index is still in flight —
+              questions, vault tables and resources genuinely cannot match yet. */}
           {query.trim().length >= 2 && hits.length === 0 && (
-            <div className="p-6 text-center text-sm text-dim">No matches.</div>
+            <div className="p-6 text-center text-sm text-dim" aria-live="polite">
+              {index ? "No matches." : "Loading search index…"}
+            </div>
           )}
           {hits.map((h, i) => (
             <button
