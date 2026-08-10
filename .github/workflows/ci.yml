@@ -68,27 +68,40 @@ jobs:
       # Serve and test in one step so the background server is guaranteed to
       # outlive the thing using it.
       #
+      # --host 127.0.0.1 is load-bearing. Vite preview otherwise binds whatever
+      # `localhost` resolves to, and on these runners that is `::1` first, so
+      # the server starts, prints its banner, and is unreachable at the IPv4
+      # address both the poll and QA_BASE_URL use. The first run failed exactly
+      # that way in all three browsers: banner printed, then 60s of refused
+      # connections. Bind the address explicitly rather than trusting the name.
+      #
       # The wait polls with node:http rather than fetch: undici applies proxy
       # configuration and rejects plain loopback URLs. Port 4173 is deliberate —
       # keep off the WHATWG bad-port list, where browsers refuse the connection
       # outright and it presents as an app hang.
       - name: Route and accessibility sweeps
         run: |
-          npx vite preview --port 4173 --strictPort &
+          npx vite preview --port 4173 --strictPort --host 127.0.0.1 &
           SERVER=$!
           trap 'kill $SERVER 2>/dev/null || true' EXIT
 
+          # On failure, dump what is actually listening. The first run gave 60s
+          # of silence and one useless line, which cost a whole CI round-trip to
+          # diagnose something `ss` would have shown immediately.
           node -e '
             const http = require("node:http");
             const deadline = Date.now() + 60000;
             (function poll() {
               http.get("http://127.0.0.1:4173/", (res) => { res.resume(); process.exit(0); })
-                .on("error", () => {
-                  if (Date.now() > deadline) { console.error("preview never came up"); process.exit(1); }
+                .on("error", (err) => {
+                  if (Date.now() > deadline) {
+                    console.error(`preview never came up on 127.0.0.1:4173 — last error: ${err.message}`);
+                    process.exit(1);
+                  }
                   setTimeout(poll, 500);
                 });
             })();
-          '
+          ' || { echo "--- listening sockets ---"; ss -ltn || true; exit 1; }
 
           node scripts/qa-routes.mjs --browser=${{ matrix.browser }}
           node scripts/qa-a11y.mjs --browser=${{ matrix.browser }}

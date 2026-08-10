@@ -94,11 +94,16 @@ The sweeps need a server running first:
 
 ```bash
 npm run build
-npx vite preview --port 4173 --strictPort &
+npx vite preview --port 4173 --strictPort --host 127.0.0.1 &
 
 npm run qa            # Chromium: routes + accessibility
 npm run qa:firefox    # same, in Firefox
 ```
+
+`--host 127.0.0.1` is not optional padding. Without it Vite binds whatever
+`localhost` resolves to, and where that is `::1` first — GitHub's runners, for
+one — the server starts, prints its banner and is unreachable at the IPv4
+address the scripts use. It presents as a hang, not as a bind failure.
 
 - `scripts/qa-routes.mjs` — every route at 375 / 768 / 1440 px, failing on
   horizontal overflow, a blank render, or a console error
