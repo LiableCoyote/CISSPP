@@ -6,6 +6,7 @@ import { checkAchievements } from "../achievements/engine";
 import { pushToast } from "../../state/toast";
 import { useProfile } from "../../state/profile";
 import { logStudySession } from "../../lib/session";
+import { quickTestXp } from "../../lib/rewards";
 
 const QUESTION_COUNT = 5;
 
@@ -65,7 +66,7 @@ export default function QuickTestMode({
         // didn't count toward the streak, the heatmap or any of the signals.
         const p = useProfile.getState().profile;
         if (p) {
-          const xpGain = 10 + Math.round(scorePct / 10);
+          const xpGain = quickTestXp(scorePct);
           const patch = await logStudySession(p, { minutes: Math.max(1, questions.length / 2) });
           await updateProfile({ xp: p.xp + xpGain, ...patch });
         }

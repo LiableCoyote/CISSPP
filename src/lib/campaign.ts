@@ -52,3 +52,18 @@ export function domainAverages(attempts: QuizAttempt[]): Map<number, number> {
 export function domainsMastered(attempts: QuizAttempt[], threshold = 70): number {
   return [...domainAverages(attempts).values()].filter((avg) => avg >= threshold).length;
 }
+
+/**
+ * Share of answers that were *not* flagged as technician-mindset picks, as a
+ * percentage. 100 with no answers yet — an untested user is not failing.
+ *
+ * Takes the two counts rather than the answer rows. The Dashboard used to hold
+ * the entire `answers` table in component state to derive this one number, and
+ * that table grows without bound as the user studies. Two count() queries still
+ * scan — `flaggedMindset` is a boolean, and booleans are not valid IndexedDB
+ * keys, so it cannot be indexed — but nothing is materialised or retained.
+ */
+export function cisoScore(totalAnswers: number, flaggedMindset: number): number {
+  if (totalAnswers <= 0) return 100;
+  return Math.round(((totalAnswers - flaggedMindset) / totalAnswers) * 100);
+}

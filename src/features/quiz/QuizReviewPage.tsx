@@ -5,6 +5,7 @@ import { ALL_QUESTIONS } from "../../data/questions.seed";
 import { useProfile } from "../../state/profile";
 import { checkAchievements } from "../achievements/engine";
 import { logStudySession } from "../../lib/session";
+import { quizXp } from "../../lib/rewards";
 
 export default function QuizReviewPage() {
   const { id } = useParams();
@@ -61,8 +62,7 @@ export default function QuizReviewPage() {
     await db.attempts.update(attempt.id, { claimedAt: new Date().toISOString() });
 
     // XP based on accuracy
-    const xpGain = Math.round(attempt.scorePct * 2) + (attempt.mode === "full" ? 200 : attempt.mode === "mixed" ? 50 : 25);
-    await updateProfile({ xp: profile.xp + xpGain });
+    await updateProfile({ xp: profile.xp + quizXp(attempt.scorePct, attempt.mode) });
 
     // Shared helper rather than a local copy: this used to subtract a fixed
     // 86_400_000 ms to find "yesterday", which lands on the same calendar date

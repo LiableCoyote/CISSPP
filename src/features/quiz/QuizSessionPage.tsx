@@ -1,36 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { db, type Question, type QuizAttempt, type QuizAnswer } from "../../db/schema";
+import { db, type QuizAttempt, type QuizAnswer } from "../../db/schema";
 import { ALL_QUESTIONS } from "../../data/questions.seed";
 import { isSpeedReader, isTechnicianAnswer, getSpeedReaderNudge, getTechnicianNudge } from "./detectors";
 import { useProfile } from "../../state/profile";
-
-function pickQuestions(
-  mode: "domain" | "mixed" | "full",
-  domainId: number | null,
-): Question[] {
-  let pool = [...ALL_QUESTIONS];
-  if (mode === "domain" && domainId) {
-    pool = pool.filter((q) => q.domainId === domainId);
-  }
-  // Shuffle
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  const limit = mode === "full" ? Math.min(pool.length, 150) : mode === "mixed" ? Math.min(pool.length, 50) : Math.min(pool.length, 25);
-  return pool.slice(0, limit);
-}
+import {
+  pickQuestions,
+  scoreQuiz,
+  didPass,
+  targetScorePct,
+  cisoCounterPatch,
+  MODE_SECONDS,
+  type QuizMode,
+} from "../../lib/scoring";
 
 export default function QuizSessionPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { profile } = useProfile();
 
-  const mode = (params.get("mode") || "domain") as "domain" | "mixed" | "full";
+  const mode = (params.get("mode") || "domain") as QuizMode;
   const domainId = params.get("domain") ? parseInt(params.get("domain")!, 10) : null;
 
-  const questions = useMemo(() => pickQuestions(mode, domainId), [mode, domainId]);
+  const questions = useMemo(() => pickQuestions(ALL_QUESTIONS, mode, domainId), [mode, domainId]);
   const [attemptId] = useState(() => `attempt-${Date.now()}`);
   const [startedAt] = useState(() => new Date());
   const [idx, setIdx] = useState(0);
@@ -40,9 +32,7 @@ export default function QuizSessionPage() {
   const [showExplanation, setShowExplanation] = useState(false);
   const [nudge, setNudge] = useState<string | null>(null);
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
-  const [timeLeft, setTimeLeft] = useState<number>(
-    mode === "full" ? 3 * 60 * 60 : mode === "mixed" ? 60 * 60 : 25 * 60,
-  );
+  const [timeLeft, setTimeLeft] = useState<number>(MODE_SECONDS[mode]);
   // Set when each question is shown. Not seeded with Date.now() at the useRef
   // call, because that argument is re-evaluated on every render.
   const questionStart = useRef<number | null>(null);
@@ -52,9 +42,7 @@ export default function QuizSessionPage() {
   const finalize = useCallback(async () => {
     const finishedAt = new Date();
     const totalSeconds = Math.round((finishedAt.getTime() - startedAt.getTime()) / 1000);
-    const correct = answers.filter((a) => a.correct).length;
-    const target = mode === "full" ? 70 : null;
-    const scorePct = Math.round((correct / questions.length) * 100);
+    const { score, scorePct } = scoreQuiz(answers, questions.length);
     const attempt: QuizAttempt = {
       id: attemptId,
       mode,
@@ -63,10 +51,10 @@ export default function QuizSessionPage() {
       startedAt: startedAt.toISOString(),
       finishedAt: finishedAt.toISOString(),
       totalSeconds,
-      score: correct,
+      score,
       scorePct,
-      passed: target !== null ? scorePct >= target : null,
-      targetScorePct: target,
+      passed: didPass(scorePct, mode),
+      targetScorePct: targetScorePct(mode),
     };
     await db.attempts.add(attempt);
     navigate(`/quiz/review/${attemptId}`);
@@ -143,10 +131,12 @@ export default function QuizSessionPage() {
     // DB directly so rapid-fire submits don't race against stale closures.
     const fresh = await db.profile.get(1);
     if (fresh) {
-      const patch: Partial<typeof fresh> = {};
-      if (q.isMindsetHeavy && correct) patch.mindsetChoicesCorrect = fresh.mindsetChoicesCorrect + 1;
-      if (tech) patch.technicianMisses = fresh.technicianMisses + 1;
-      if (speed && !correct) patch.speedReaderMisses = fresh.speedReaderMisses + 1;
+      const patch = cisoCounterPatch(fresh, {
+        isMindsetHeavy: !!q.isMindsetHeavy,
+        correct,
+        technician: tech,
+        speedy: speed,
+      });
       if (Object.keys(patch).length > 0) await db.profile.update(1, patch);
     }
 

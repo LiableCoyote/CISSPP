@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { subDays, addDays, format } from "date-fns";
 import type { DomainId, Profile, QuizAttempt } from "../db/schema";
-import { campaignPosition, daysUntilExam, domainAverages, domainsMastered } from "./campaign";
+import { campaignPosition, cisoScore, daysUntilExam, domainAverages, domainsMastered } from "./campaign";
 
 const NOW = new Date("2026-06-15T12:00:00Z");
 
@@ -117,5 +117,22 @@ describe("domainsMastered", () => {
 
   it("is zero with no attempts", () => {
     expect(domainsMastered([])).toBe(0);
+  });
+});
+
+describe("cisoScore", () => {
+  it("is the share of answers not flagged as technician picks", () => {
+    expect(cisoScore(10, 2)).toBe(80);
+    expect(cisoScore(3, 1)).toBe(67);
+  });
+
+  // An untested user is not failing.
+  it("is 100 before any question has been answered", () => {
+    expect(cisoScore(0, 0)).toBe(100);
+  });
+
+  it("is 100 when nothing was flagged and 0 when everything was", () => {
+    expect(cisoScore(25, 0)).toBe(100);
+    expect(cisoScore(25, 25)).toBe(0);
   });
 });

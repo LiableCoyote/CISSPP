@@ -8,6 +8,7 @@ import { useProfile } from "../../state/profile";
 import { format } from "date-fns";
 import { checkAchievements } from "../achievements/engine";
 import { logStudySession } from "../../lib/session";
+import { flashcardXp } from "../../lib/rewards";
 
 type Quality = 0 | 1 | 3 | 4;
 
@@ -94,7 +95,7 @@ export default function ReviewSession() {
     // Read fresh rather than from the render closure: keyboard grading can fire
     // faster than refreshProfile settles, which dropped XP.
     const current = useProfile.getState().profile ?? profile;
-    const xpGain = quality >= 3 ? 5 : 2;
+    const xpGain = flashcardXp(quality);
 
     // Through the shared helper, like the quiz, quest and Vault paths. This was
     // the last surface writing studyLog by hand, and the only one that never

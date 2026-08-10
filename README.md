@@ -125,6 +125,10 @@ it *does* run in CI, which is the only place it can.
 - lint, typecheck and the full unit suite
 - route and accessibility sweeps across **Chromium, Firefox and WebKit**
 
+WebKit passed its first real run clean, across all 12 routes at all three
+viewports. That was not a foregone conclusion — it had never executed the app
+anywhere before CI existed.
+
 Typecheck is its own step rather than riding on `npm run build`. If the build
 script were ever simplified to plain `vite build`, typechecking would otherwise
 disappear from CI with no other signal.
@@ -136,11 +140,18 @@ that upstream range catches up.
 
 ### Tests
 
-221 tests over the pure logic: export/import and every rejection path, analytics
-and study signals, recommendations, campaign/date helpers, quick-test
-generation, SM-2, XP levels, ISO week keys, guarded storage, seed idempotency
-snapshots and the achievement engine. No jsdom, no component tests — Dexie
-runs on `fake-indexeddb`.
+273 tests over the pure logic: export/import and every rejection path, analytics
+and study signals, recommendations, campaign/date helpers, quiz scoring and
+question selection, XP rewards, profile slots, quick-test generation, SM-2, XP
+levels, ISO week keys, guarded storage, seed idempotency snapshots and the
+achievement engine. No jsdom, no component tests — Dexie runs on
+`fake-indexeddb`.
+
+Logic that decides something lives in `src/lib/`, not in a component, so it can
+be tested without a DOM. `scoring.ts` and `rewards.ts` were extracted from
+`QuizSessionPage`, `ReviewSession` and `QuickTestMode` for exactly that reason —
+`scorePct` feeds domain velocity, boss badges and the remediation banner, and
+was previously verified nowhere.
 
 Anything time-dependent takes the clock as a parameter, so the suite does not
 change behaviour when it happens to run.

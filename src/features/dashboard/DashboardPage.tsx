@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../../db/schema";
 import { useProfile } from "../../state/profile";
 import { DOMAINS } from "../../data/domains";
-import { campaignPosition, daysUntilExam, domainAverages } from "../../lib/campaign";
+import { campaignPosition, cisoScore, daysUntilExam, domainAverages } from "../../lib/campaign";
 import { WEEK_META } from "../../data/weeks";
 import { xpToLevel, LEVEL_XP_THRESHOLDS } from "../../lib/xp";
 import { format, parseISO } from "date-fns";
@@ -31,7 +31,13 @@ export default function DashboardPage() {
   const { profile } = useProfile();
   const attempts = useLiveQuery(() => db.attempts.toArray()) || [];
   const quests = useLiveQuery(() => db.quests.toArray()) || [];
-  const answers = useLiveQuery(() => db.answers.toArray()) || [];
+  // Counts, not rows. This was `db.answers.toArray()` held in component state
+  // purely to derive one percentage, and that table grows with every question
+  // the user ever answers.
+  const answerCount = useLiveQuery(() => db.answers.count()) ?? 0;
+  const mindsetFlagCount = useLiveQuery(() =>
+    db.answers.filter((a) => a.flaggedMindset).count(),
+  ) ?? 0;
   const unlocks = useLiveQuery(() =>
     db.achievements.orderBy("unlockedAt").reverse().limit(3).toArray(),
   ) || [];
@@ -60,8 +66,7 @@ export default function DashboardPage() {
   });
 
   // CISO score
-  const total = answers.length;
-  const cisoScore = total > 0 ? Math.round(((total - answers.filter((a) => a.flaggedMindset).length) / total) * 100) : 100;
+  const ciso = cisoScore(answerCount, mindsetFlagCount);
 
   // Next boss
   const bossWeeks = [4, 6, 7];
@@ -145,7 +150,7 @@ export default function DashboardPage() {
         </div>
         <div className="card p-3 text-center">
           <p className="text-xs text-dim">CISO Score</p>
-          <p className="text-2xl font-bold text-accent">{cisoScore}%</p>
+          <p className="text-2xl font-bold text-accent">{ciso}%</p>
         </div>
       </div>
 
