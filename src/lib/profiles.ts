@@ -58,20 +58,29 @@ export function getActiveSlotId(): string {
   return getItem(ACTIVE_KEY) || "default";
 }
 
+/**
+ * Switches the active profile and reloads. Throws rather than returning early:
+ * the caller renders a button, and a silent no-op made it look broken.
+ */
 export function switchSlot(id: string): void {
-  // If the write fails the reload would silently land on the same profile.
   if (!setItem(ACTIVE_KEY, id)) {
-    console.error("Could not switch profile — storage is unavailable.");
-    return;
+    throw new Error("Couldn't switch profile — this browser is blocking storage.");
   }
   window.location.reload();
 }
 
+/**
+ * Creates a slot. Throws if the list can't be persisted — the caller switches
+ * to the new slot immediately, and if only the active-slot write had landed the
+ * user would boot into a database that appears in no slot list at all.
+ */
 export function createSlot(displayName: string): string {
   const id = "slot-" + Date.now();
   const slots = getSlots();
   slots.push({ id, displayName, examDate: null, created: new Date().toISOString() });
-  setJSON(SLOTS_KEY, slots);
+  if (!setJSON(SLOTS_KEY, slots)) {
+    throw new Error("Couldn't save the new profile — this browser is blocking storage.");
+  }
   return id;
 }
 

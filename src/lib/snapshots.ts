@@ -1,10 +1,14 @@
 import { format } from "date-fns";
 import { db, type Snapshot } from "../db/schema";
 import { exportData, importData } from "./export";
+import { getActiveSlotId } from "./profiles";
 import { getItem, setItem } from "./safeStorage";
 
 const MAX_SNAPSHOTS = 3;
-const LAST_DAILY_KEY = "cisspp-last-snapshot-day";
+// Slot-scoped: each profile is its own IndexedDB database, so a global key
+// meant opening profile A marked the day done and B never got a snapshot.
+// Matches the pattern in components/layout/Onboarding.tsx.
+const lastDailyKey = () => `cisspp-last-snapshot-day-${getActiveSlotId()}`;
 
 /**
  * Automatic local backups.
@@ -17,27 +21,46 @@ const LAST_DAILY_KEY = "cisspp-last-snapshot-day";
  * Snapshots are excluded from the export payload on purpose: a backup that
  * contained its own history would grow geometrically.
  */
+
+/**
+ * Writes a snapshot, or throws.
+ *
+ * Callers that are about to destroy data MUST use this and let the failure
+ * propagate. `createSnapshot` swallows errors and returns null, which was the
+ * shape of a real data-loss bug: the import path discarded that null, so a
+ * snapshot failing under quota — exactly when it fails — meant the destructive
+ * restore ran anyway, right after the UI promised a backup had been taken.
+ */
+export async function createSnapshotOrThrow(reason: Snapshot["reason"]): Promise<Snapshot> {
+  const payload = JSON.stringify(await exportData());
+  const snapshot: Snapshot = {
+    id: `snap-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+    reason,
+    // Blob size, not string length: payload.length counts UTF-16 code units and
+    // this content is emoji-heavy, so it under-reported by up to half. Settings
+    // renders this number to the user as KB.
+    payload,
+    sizeBytes: new Blob([payload]).size,
+  };
+  await db.snapshots.put(snapshot);
+
+  // Keep only the newest few — this data is a safety net, not an archive.
+  const all = await db.snapshots.orderBy("createdAt").reverse().toArray();
+  const stale = all.slice(MAX_SNAPSHOTS);
+  if (stale.length > 0) await db.snapshots.bulkDelete(stale.map((s) => s.id));
+
+  return snapshot;
+}
+
+/**
+ * Best-effort variant for background work (the daily snapshot), where failing
+ * should not interrupt the user. Never use this to guard a destructive action.
+ */
 export async function createSnapshot(reason: Snapshot["reason"]): Promise<Snapshot | null> {
   try {
-    const payload = JSON.stringify(await exportData());
-    const snapshot: Snapshot = {
-      id: `snap-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      reason,
-      payload,
-      sizeBytes: payload.length,
-    };
-    await db.snapshots.put(snapshot);
-
-    // Keep only the newest few — this data is a safety net, not an archive.
-    const all = await db.snapshots.orderBy("createdAt").reverse().toArray();
-    const stale = all.slice(MAX_SNAPSHOTS);
-    if (stale.length > 0) await db.snapshots.bulkDelete(stale.map((s) => s.id));
-
-    return snapshot;
+    return await createSnapshotOrThrow(reason);
   } catch (err) {
-    // A snapshot failing must never block the action it was protecting; the
-    // caller decides whether to continue without one.
     console.error("Snapshot failed:", err);
     return null;
   }
@@ -50,17 +73,19 @@ export async function listSnapshots(): Promise<Snapshot[]> {
 export async function restoreSnapshot(id: string): Promise<void> {
   const snap = await db.snapshots.get(id);
   if (!snap) throw new Error("That snapshot no longer exists.");
-  // Take one of the current state first, so restoring is itself undoable.
-  await createSnapshot("pre-import");
+  // Take one of the current state first, so restoring is itself undoable — and
+  // abort if that fails rather than replacing data with no way back.
+  await createSnapshotOrThrow("pre-import");
   await importData(snap.payload);
 }
 
 /** Takes at most one snapshot per day, on first launch. */
 export async function maybeDailySnapshot(): Promise<void> {
   const today = format(new Date(), "yyyy-MM-dd");
-  if (getItem(LAST_DAILY_KEY) === today) return;
+  const key = lastDailyKey();
+  if (getItem(key) === today) return;
   // Nothing to protect on a fresh install.
   if ((await db.profile.count()) === 0) return;
   await createSnapshot("daily");
-  setItem(LAST_DAILY_KEY, today);
+  setItem(key, today);
 }

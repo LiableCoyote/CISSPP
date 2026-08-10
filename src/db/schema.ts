@@ -87,6 +87,13 @@ export interface QuizAttempt {
   scorePct: number;
   passed: boolean | null;
   targetScorePct: number | null;
+  /**
+   * When the user claimed the XP for this attempt. Absent on rows written
+   * before v6. Guards against re-awarding: the review page is a normal URL, so
+   * revisiting it and tapping "Claim XP & Finish" used to grant the XP again,
+   * re-log the session and re-run the achievement checks.
+   */
+  claimedAt?: string | null;
 }
 
 export interface QuizAnswer {
@@ -220,6 +227,9 @@ class CissppDb extends Dexie {
             delete p.level;
           });
       });
+    // v6: adds QuizAttempt.claimedAt. No index needed and no backfill — an
+    // absent value reads as unclaimed, which is correct for historical rows.
+    this.version(6).stores({ attempts: "id, mode, startedAt, finishedAt" });
   }
 }
 

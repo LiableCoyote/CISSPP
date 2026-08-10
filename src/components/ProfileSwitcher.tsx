@@ -14,14 +14,27 @@ export default function ProfileSwitcher() {
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCreate = () => {
     if (!newName.trim()) return;
-    const id = createSlot(newName.trim());
-    setSlots(getSlots());
-    setNewName("");
-    setCreating(false);
-    switchSlot(id); // immediately switch to the new profile (reloads page)
+    try {
+      const id = createSlot(newName.trim());
+      setSlots(getSlots());
+      setNewName("");
+      setCreating(false);
+      switchSlot(id); // immediately switch to the new profile (reloads page)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't create that profile.");
+    }
+  };
+
+  const handleSwitch = (id: string) => {
+    try {
+      switchSlot(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't switch profile.");
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -37,6 +50,12 @@ export default function ProfileSwitcher() {
   return (
     <section aria-labelledby="profiles-heading" className="card mb-4">
       <h2 id="profiles-heading" className="font-semibold mb-3">Study Profiles</h2>
+
+      {error && (
+        <p className="text-xs text-danger mb-3" role="alert">
+          {error}
+        </p>
+      )}
       <p className="text-sm text-dim mb-3">
         Each profile has its own independent progress, quests, and flashcards. Switching profiles
         reloads the app.
@@ -60,7 +79,7 @@ export default function ProfileSwitcher() {
               {slot.id !== activeId && (
                 <>
                   <button
-                    onClick={() => switchSlot(slot.id)}
+                    onClick={() => handleSwitch(slot.id)}
                     className="btn-outline text-xs px-2 py-1"
                     aria-label={`Switch to ${slot.displayName}`}
                   >

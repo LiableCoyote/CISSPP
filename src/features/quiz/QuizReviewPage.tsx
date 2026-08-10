@@ -48,7 +48,18 @@ export default function QuizReviewPage() {
     if ("vibrate" in navigator) navigator.vibrate(5);
   };
 
+  const claimed = !!attempt.claimedAt;
+
   const awardComplete = async () => {
+    // The review page is an ordinary URL, so this handler was reachable on every
+    // visit — going back and tapping again re-awarded the XP, re-logged the
+    // session and re-ran the achievement checks. Claim exactly once.
+    if (claimed) {
+      navigate("/");
+      return;
+    }
+    await db.attempts.update(attempt.id, { claimedAt: new Date().toISOString() });
+
     // XP based on accuracy
     const xpGain = Math.round(attempt.scorePct * 2) + (attempt.mode === "full" ? 200 : attempt.mode === "mixed" ? 50 : 25);
     await updateProfile({ xp: profile.xp + xpGain });
@@ -182,8 +193,13 @@ export default function QuizReviewPage() {
       )}
 
       <button onClick={awardComplete} className="btn-primary w-full mt-8">
-        Claim XP & Finish
+        {claimed ? "Back to Dashboard" : "Claim XP & Finish"}
       </button>
+      {claimed && (
+        <p className="text-xs text-dim text-center mt-2">
+          XP for this attempt was already claimed.
+        </p>
+      )}
     </div>
   );
 }

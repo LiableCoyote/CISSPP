@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { format, parseISO } from "date-fns";
 import { useProfile } from "../../state/profile";
-import { createSnapshot, listSnapshots, restoreSnapshot } from "../../lib/snapshots";
+import { createSnapshotOrThrow, listSnapshots, restoreSnapshot } from "../../lib/snapshots";
 import { db } from "../../db/schema";
 import { exportData, importData } from "../../lib/export";
 import { downloadJSON } from "../../lib/download";
@@ -89,9 +89,21 @@ export default function SettingsPage() {
     setPendingImport(null);
     setImportStatus("Saving a snapshot first…");
     try {
+      // Must throw, not return null. The dialog just promised a snapshot would
+      // be taken; proceeding without one would replace everything with no undo,
+      // and a failure here means the storage is full — exactly when it matters.
+      await createSnapshotOrThrow("pre-import");
+    } catch (err) {
+      setImportStatus(
+        `✗ Import cancelled — couldn't save a snapshot first (${
+          err instanceof Error ? err.message : "unknown"
+        }). Nothing was changed.`,
+      );
+      return;
+    }
+
+    try {
       const text = await file.text();
-      // Snapshot before the destructive write, so this is undoable.
-      await createSnapshot("pre-import");
       await importData(text);
       setImportStatus("✓ Imported. Reloading…");
       setTimeout(() => window.location.reload(), 1000);

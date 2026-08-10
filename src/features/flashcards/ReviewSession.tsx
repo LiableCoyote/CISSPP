@@ -7,17 +7,20 @@ import { sm2, nextReviewDate } from "./srs";
 import { useProfile } from "../../state/profile";
 import { format } from "date-fns";
 import { checkAchievements } from "../achievements/engine";
+import { logStudySession } from "../../lib/session";
 
 type Quality = 0 | 1 | 3 | 4;
 
 export default function ReviewSession() {
   const navigate = useNavigate();
   const { profile, updateProfile, refreshProfile } = useProfile();
-  const now = new Date();
-  const dueCards = useLiveQuery(() =>
-    db.flashcards.where("dueAt").below(now.toISOString()).toArray()
+  // Frozen at session start. Recomputing `new Date()` each render would let a
+  // card that falls due mid-session appear unexpectedly.
+  const [sessionStart] = useState(() => new Date().toISOString());
+  const dueCards = useLiveQuery(
+    () => db.flashcards.where("dueAt").below(sessionStart).toArray(),
+    [sessionStart],
   );
-  const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
 
@@ -52,7 +55,7 @@ export default function ReviewSession() {
     return <div className="page text-center text-dim">Loading cards…</div>;
   }
 
-  if (dueCards.length === 0 || idx >= dueCards.length) {
+  if (dueCards.length === 0) {
     return (
       <div className="page text-center">
         <div className="card">
@@ -67,7 +70,11 @@ export default function ReviewSession() {
     );
   }
 
-  const card: Flashcard = dueCards[idx];
+  // Always the head of the queue. Grading pushes a card's dueAt into the future
+  // so it leaves this live query and the next one shifts into position — which
+  // is why the cursor must NOT also advance. It used to do both, skipping every
+  // second card: a 20-card session showed about 10.
+  const card: Flashcard = dueCards[0];
 
   async function grade(quality: Quality) {
     if (!profile) return;
@@ -84,36 +91,30 @@ export default function ReviewSession() {
       dueAt: next.toISOString(),
       lastReviewedAt: new Date().toISOString(),
     });
-    // Small XP for review
+    // Read fresh rather than from the render closure: keyboard grading can fire
+    // faster than refreshProfile settles, which dropped XP.
+    const current = useProfile.getState().profile ?? profile;
     const xpGain = quality >= 3 ? 5 : 2;
-    await updateProfile({ xp: profile.xp + xpGain });
-    // Track flashcard count in study log
-    const today = format(new Date(), "yyyy-MM-dd");
-    const existing = await db.studyLog.get(today);
-    if (existing) {
-      await db.studyLog.update(today, {
-        flashcardsReviewed: existing.flashcardsReviewed + 1,
-        minutes: existing.minutes + 1,
-      });
-    } else {
-      await db.studyLog.add({
-        date: today,
-        minutes: 1,
-        sessions: 1,
-        questsCompleted: 0,
-        flashcardsReviewed: 1,
-      });
-    }
+
+    // Through the shared helper, like the quiz, quest and Vault paths. This was
+    // the last surface writing studyLog by hand, and the only one that never
+    // advanced the streak — in a spaced-repetition app.
+    const streakPatch = await logStudySession(current, {
+      minutes: 1,
+      flashcardsReviewed: 1,
+    });
+    await updateProfile({ xp: current.xp + xpGain, ...streakPatch });
+
     if ("vibrate" in navigator) navigator.vibrate(5);
 
-    const reviewedToday = (existing?.flashcardsReviewed || 0) + 1;
+    const today = format(new Date(), "yyyy-MM-dd");
+    const reviewedToday = (await db.studyLog.get(today))?.flashcardsReviewed ?? 1;
     const totalDeck = await db.flashcards.count();
     await checkAchievements({ kind: "flashcard-review", reviewedToday, totalDeck });
     await refreshProfile();
 
     setRevealed(false);
     setReviewedCount((n) => n + 1);
-    setIdx((n) => n + 1);
     x.set(0);
     y.set(0);
   }
@@ -143,8 +144,14 @@ export default function ReviewSession() {
         <button onClick={() => navigate("/flashcards")} className="text-dim hover:text-ink" aria-label="Exit review session">
           <span aria-hidden="true">← </span>Exit
         </button>
-        <span className="text-sm text-dim" aria-label={`Card ${idx + 1} of ${dueCards.length}`} aria-live="polite">
-          {idx + 1} / {dueCards.length}
+        {/* The queue drains as cards are graded, so the session total is what's
+            been done plus what's left. */}
+        <span
+          className="text-sm text-dim"
+          aria-label={`Card ${reviewedCount + 1} of ${reviewedCount + dueCards.length}`}
+          aria-live="polite"
+        >
+          {reviewedCount + 1} / {reviewedCount + dueCards.length}
         </span>
       </div>
 
