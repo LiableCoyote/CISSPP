@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { db, type QuizAttempt, type QuizAnswer } from "../../db/schema";
+import { db, type Question, type QuizAttempt, type QuizAnswer } from "../../db/schema";
 import { ALL_QUESTIONS } from "../../data/questions.seed";
+import { dueReviews, newReview, applyReview, gradeFromOutcome } from "../../lib/questionSrs";
 import { isSpeedReader, isTechnicianAnswer, getSpeedReaderNudge, getTechnicianNudge } from "./detectors";
 import { useProfile } from "../../state/profile";
 import {
@@ -10,6 +11,8 @@ import {
   didPass,
   targetScorePct,
   cisoCounterPatch,
+  describeMode,
+  MODE_LIMITS,
   MODE_SECONDS,
   type QuizMode,
 } from "../../lib/scoring";
@@ -22,7 +25,34 @@ export default function QuizSessionPage() {
   const mode = (params.get("mode") || "domain") as QuizMode;
   const domainId = params.get("domain") ? parseInt(params.get("domain")!, 10) : null;
 
-  const questions = useMemo(() => pickQuestions(ALL_QUESTIONS, mode, domainId), [mode, domainId]);
+  // Misses mode draws from questionReviews, which needs a DB read. Loaded once
+  // into state rather than through useLiveQuery: a live query would reorder the
+  // queue underneath the user as each answer reschedules its own row — the same
+  // shifting-cursor bug the flashcard session had.
+  // `null` means still loading, which is not the same as "nothing due".
+  const [missPool, setMissPool] = useState<Question[] | null>(null);
+  useEffect(() => {
+    if (mode !== "misses") return;
+    let cancelled = false;
+    void (async () => {
+      const rows = await db.questionReviews.toArray();
+      const byId = new Map(ALL_QUESTIONS.map((q) => [q.id, q]));
+      const due = dueReviews(rows, new Date(), MODE_LIMITS.misses)
+        .map((r) => byId.get(r.questionId))
+        .filter((q): q is Question => !!q);
+      if (!cancelled) setMissPool(due);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode]);
+
+  const questions = useMemo(() => {
+    // Not run through pickQuestions: dueReviews has already ordered these
+    // hardest-first and applied the limit, and shuffling would throw that away.
+    if (mode === "misses") return missPool ?? [];
+    return pickQuestions(ALL_QUESTIONS, mode, domainId);
+  }, [mode, domainId, missPool]);
   const [attemptId] = useState(() => `attempt-${Date.now()}`);
   const [startedAt] = useState(() => new Date());
   const [idx, setIdx] = useState(0);
@@ -93,10 +123,19 @@ export default function QuizSessionPage() {
   }, [submitted]);
 
   if (!profile) return null;
+  // Loading is not emptiness — without this the misses queue flashes "nothing
+  // to retry" for a frame before the DB read lands.
+  if (mode === "misses" && missPool === null) {
+    return <div className="page text-dim">Loading your misses…</div>;
+  }
   if (questions.length === 0) {
     return (
       <div className="page text-center">
-        <p className="text-dim">No questions available for this selection.</p>
+        <p className="text-dim">
+          {mode === "misses"
+            ? "Nothing due for retry. Miss a question and it'll show up here."
+            : "No questions available for this selection."}
+        </p>
         <button className="btn-primary mt-4" onClick={() => navigate("/quiz")}>Back</button>
       </div>
     );
@@ -126,6 +165,21 @@ export default function QuizSessionPage() {
     };
     setAnswers((a) => [...a, answer]);
     await db.answers.add(answer);
+
+    // Question SRS. A first miss earns a row due immediately; every later
+    // encounter — right or wrong — reschedules through SM-2, so a question
+    // answered correctly twice drifts out of the queue on its own and a repeat
+    // miss comes back tomorrow rather than in the same sitting.
+    //
+    // A correct answer on a question that was never missed creates nothing:
+    // the queue is for gaps, not for everything ever seen.
+    const review = await db.questionReviews.get(q.id);
+    if (review) {
+      const grade = gradeFromOutcome(correct, timeTakenMs, confidence);
+      await db.questionReviews.put(applyReview(review, grade));
+    } else if (!correct) {
+      await db.questionReviews.put(newReview(q.id, q.domainId));
+    }
 
     // Update CISO-thinking counters on the profile row. Read-modify-write on the
     // DB directly so rapid-fire submits don't race against stale closures.
@@ -170,7 +224,7 @@ export default function QuizSessionPage() {
   const fmtTime = (s: number) =>
     `${String(Math.floor(s / 3600)).padStart(1, "0")}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-  const modeLabel = mode === "full" ? "FULL EXAM 🐉" : mode === "mixed" ? "Mixed Set" : `Domain ${domainId}`;
+  const modeLabel = mode === "full" ? "FULL EXAM 🐉" : describeMode(mode, domainId);
 
   return (
     <div className="min-h-screen flex flex-col bg-bg">

@@ -77,7 +77,13 @@ export interface Question {
 
 export interface QuizAttempt {
   id: string;
-  mode: "domain" | "mixed" | "full";
+  /**
+   * Kept as a literal union rather than importing `QuizMode` from
+   * `src/lib/scoring.ts` — scoring imports these types, so the dependency only
+   * runs one way. The two must be kept in step by hand; `QuizMode` is derived
+   * from this set, not the other way round.
+   */
+  mode: "domain" | "mixed" | "full" | "misses";
   domainId: DomainId | null;
   questionIds: string[];
   startedAt: string;
@@ -157,6 +163,31 @@ export interface Snapshot {
   sizeBytes: number;
 }
 
+/**
+ * SM-2 scheduling state for a question the user has got wrong at least once.
+ *
+ * Separate from `Flashcard` rather than reusing it: a flashcard is self-graded
+ * ("how well did I recall this?"), while a question retry has an objectively
+ * right answer. They also have different lifecycles — a card is authored, a
+ * review row is earned by missing something.
+ *
+ * Keyed by questionId, so a question missed in five different attempts has one
+ * schedule rather than five.
+ */
+export interface QuestionReview {
+  questionId: string;
+  domainId: DomainId;
+  ease: number;
+  interval: number;
+  reps: number;
+  lapses: number;
+  dueAt: string;
+  lastReviewedAt: string | null;
+  /** Total times this question has been answered wrong, across all attempts. */
+  timesMissed: number;
+  firstMissedAt: string;
+}
+
 // Resolved once at module load — switching profiles requires a page reload.
 // Must not throw: this runs before React mounts, so an unguarded storage error
 // would leave a blank page that ErrorBoundary can never catch.
@@ -176,6 +207,7 @@ class CissppDb extends Dexie {
   resources!: Table<ResourceState, string>;
   vaultWins!: Table<VaultWin, string>;
   snapshots!: Table<Snapshot, string>;
+  questionReviews!: Table<QuestionReview, string>;
 
   constructor() {
     super("cisspp-" + _activeSlot);
@@ -230,6 +262,59 @@ class CissppDb extends Dexie {
     // v6: adds QuizAttempt.claimedAt. No index needed and no backfill — an
     // absent value reads as unclaimed, which is correct for historical rows.
     this.version(6).stores({ attempts: "id, mode, startedAt, finishedAt" });
+    // v7: questionReviews — SM-2 scheduling for missed questions.
+    //
+    // Backfilled from existing wrong answers rather than starting empty. A user
+    // with months of quiz history is exactly who this feature is for, and an
+    // empty table would tell them they have nothing to retry when in fact they
+    // have hundreds of misses already recorded.
+    //
+    // Everything is scheduled due immediately: the honest reading of an old miss
+    // is "you got this wrong and have not revisited it", not a guess at where in
+    // an SM-2 curve it would have landed had the feature always existed.
+    this.version(7)
+      .stores({ questionReviews: "questionId, dueAt, domainId" })
+      .upgrade(async (tx) => {
+        const now = new Date().toISOString();
+        const answers = (await tx.table("answers").toArray()) as QuizAnswer[];
+        const questions = (await tx.table("questions").toArray()) as Question[];
+        const attempts = (await tx.table("attempts").toArray()) as QuizAttempt[];
+        const domainOf = new Map(questions.map((q) => [q.id, q.domainId]));
+        // An answer carries no timestamp of its own, but it knows its attempt,
+        // and the attempt knows when it started. That gives a real firstMissedAt
+        // instead of stamping every historical miss with the migration time.
+        const startedOf = new Map(attempts.map((a) => [a.id, a.startedAt]));
+
+        const rows = new Map<string, QuestionReview>();
+        for (const a of answers) {
+          if (a.correct) continue;
+          // A question whose row is gone (content removed in an update) has no
+          // domain to file it under, and cannot be served in a retry anyway.
+          const domainId = domainOf.get(a.questionId);
+          if (domainId === undefined) continue;
+          const missedAt = startedOf.get(a.attemptId) ?? now;
+
+          const existing = rows.get(a.questionId);
+          if (existing) {
+            existing.timesMissed += 1;
+            if (missedAt < existing.firstMissedAt) existing.firstMissedAt = missedAt;
+            continue;
+          }
+          rows.set(a.questionId, {
+            questionId: a.questionId,
+            domainId,
+            ease: 2.5,
+            interval: 0,
+            reps: 0,
+            lapses: 1,
+            dueAt: now,
+            lastReviewedAt: null,
+            timesMissed: 1,
+            firstMissedAt: missedAt,
+          });
+        }
+        if (rows.size > 0) await tx.table("questionReviews").bulkAdd([...rows.values()]);
+      });
   }
 }
 

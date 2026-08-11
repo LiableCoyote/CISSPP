@@ -10,6 +10,8 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **Memorization vault** — 12 drag-to-order sequences (BCP, NIST IR, OSI, RMF, forensics, IAAA, data lifecycle, change management, DR test rigor, SDLC, Kerberos, evidence lifecycle) and 12 reference tables
 - **Vault Quick Test** — 5 timed recall questions generated from any sequence's canonical order
 - **Full-length exam simulation** (150 Q, 3 hr, hard no-back rule, CAT-style)
+- **Retry your misses** — questions you get wrong come back on their own SM-2
+  schedule, hardest first; answer one correctly twice and it stops chasing you
 - **Study analytics** — 30/90-day timeline, per-domain learning curves with 7-day movement, stalled-domain detection, 90-day heatmap, score trends, CISO Thinking Score
 - **Next Up recommendations** — ranks what to study next from your actual behaviour, plus signals for cramming, low-score runs, dormancy, and SRS backlog
 - **Gamification** — XP, 10 level titles, daily streak with freeze, 29 achievements across 8 categories with Common/Rare/Epic/Legendary difficulty tiers (all 29 reachable)
@@ -78,8 +80,9 @@ new rows never reach anyone who already has a database. If storage is blocked
 the gate reads as unset and the backfill simply runs, so the failure mode is a
 slower launch, not missing content.
 
-Backups are versioned. Version 1 files still restore; version 2 adds vault-game
-wins and your reminder settings. The app also keeps the three most recent
+Backups are versioned. Versions 1 and 2 still restore; version 2 added
+vault-game wins and your reminder settings, and version 3 adds the retry
+schedule for missed questions. The app also keeps the three most recent
 automatic snapshots (daily, and before any import or reset) so an accidental
 restore is undoable from **Settings → Backup & Restore**.
 
@@ -148,9 +151,9 @@ that upstream range catches up.
 
 ### Tests
 
-273 tests over the pure logic: export/import and every rejection path, analytics
+300 tests over the pure logic: export/import and every rejection path, analytics
 and study signals, recommendations, campaign/date helpers, quiz scoring and
-question selection, XP rewards, profile slots, quick-test generation, SM-2, XP
+question selection, question spaced repetition, XP rewards, profile slots, quick-test generation, SM-2, XP
 levels, ISO week keys, guarded storage, seed idempotency snapshots and the
 achievement engine. No jsdom, no component tests — Dexie runs on
 `fake-indexeddb`.

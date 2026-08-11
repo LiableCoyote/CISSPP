@@ -177,6 +177,47 @@ describe("importData", () => {
     expect(await db.flashcards.count()).toBe(3);
   });
 
+  // Every backup downloaded before question retries existed is a v2 file.
+  // Restoring one must work and must leave the user with an empty retry queue
+  // rather than a failed import.
+  it("imports a version 2 payload with no questionReviews block", async () => {
+    const backup = await exportData();
+    const v2 = { ...backup, version: 2 };
+    delete (v2 as Record<string, unknown>).questionReviews;
+
+    await expect(importData(JSON.stringify(v2))).resolves.toBeUndefined();
+    expect(await db.flashcards.count()).toBe(3);
+    expect(await db.questionReviews.count()).toBe(0);
+  });
+
+  it("round-trips the retry schedule", async () => {
+    await db.questionReviews.put({
+      questionId: "q-42",
+      domainId: 3,
+      ease: 2.36,
+      interval: 6,
+      reps: 2,
+      lapses: 1,
+      dueAt: "2026-05-01T00:00:00.000Z",
+      lastReviewedAt: "2026-04-25T00:00:00.000Z",
+      timesMissed: 2,
+      firstMissedAt: "2026-04-01T00:00:00.000Z",
+    });
+    const backup = await exportData();
+    await db.questionReviews.clear();
+
+    await importData(JSON.stringify(backup));
+    const restored = await db.questionReviews.get("q-42");
+    // The whole schedule, not just the id — a restore that dropped `dueAt`
+    // would silently make everything due at once.
+    expect(restored).toMatchObject({
+      questionId: "q-42",
+      interval: 6,
+      dueAt: "2026-05-01T00:00:00.000Z",
+      timesMissed: 2,
+    });
+  });
+
   it.each([
     ["invalid JSON", "{{{"],
     ["empty payload", JSON.stringify({ version: EXPORT_VERSION })],

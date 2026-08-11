@@ -1,13 +1,18 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { DOMAINS } from "../../data/domains";
-import type { DomainId } from "../../db/schema";
+import { db, type DomainId } from "../../db/schema";
+import { countDue } from "../../lib/questionSrs";
+import type { QuizMode } from "../../lib/scoring";
 
 export default function QuizLauncherPage() {
   const navigate = useNavigate();
   const [selectedDomain, setSelectedDomain] = useState<DomainId | null>(null);
+  // Live, so finishing a retry run updates the badge on the way back.
+  const dueMisses = useLiveQuery(async () => countDue(await db.questionReviews.toArray())) ?? 0;
 
-  const start = (mode: "domain" | "mixed" | "full", domainId?: DomainId) => {
+  const start = (mode: QuizMode, domainId?: DomainId) => {
     const params = new URLSearchParams({ mode });
     if (domainId) params.set("domain", String(domainId));
     navigate(`/quiz/session?${params.toString()}`);
@@ -60,6 +65,38 @@ export default function QuizLauncherPage() {
           Start Domain Drill →
         </button>
       </section>
+
+      {/* Retry misses — first, because it is the highest-value run available */}
+      <button
+        onClick={() => dueMisses > 0 && start("misses")}
+        disabled={dueMisses === 0}
+        className="card card-hover w-full text-left block mb-4 disabled:opacity-50 disabled:cursor-not-allowed border-xp/40 bg-xp/5"
+        aria-label={
+          dueMisses > 0
+            ? `Retry your misses. ${dueMisses} question${dueMisses === 1 ? "" : "s"} due.`
+            : "Retry your misses. Nothing due right now."
+        }
+      >
+        <div className="flex items-start gap-3">
+          <span className="text-3xl" aria-hidden>🎯</span>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold">Retry Your Misses</h3>
+              {dueMisses > 0 && (
+                <span className="pill bg-xp/20 text-xp text-[10px]" aria-hidden="true">
+                  {dueMisses} due
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-dim mt-1">
+              {dueMisses > 0
+                ? "Questions you got wrong, resurfaced on a spaced schedule. Hardest first."
+                : "Nothing due. Questions you miss show up here automatically."}
+            </p>
+            {dueMisses > 0 && <p className="text-xs text-xp mt-2">Tap to start →</p>}
+          </div>
+        </div>
+      </button>
 
       {/* Mixed set */}
       <button

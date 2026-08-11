@@ -8,13 +8,14 @@ import type { Question, QuizAnswer, Profile } from "../db/schema";
  * it was computed inline in a component and verified nowhere.
  */
 
-export type QuizMode = "domain" | "mixed" | "full";
+export type QuizMode = "domain" | "mixed" | "full" | "misses";
 
 /** How many questions each mode serves, before the pool runs out. */
 export const MODE_LIMITS: Record<QuizMode, number> = {
   full: 150,
   mixed: 50,
   domain: 25,
+  misses: 25,
 };
 
 /** Seconds on the clock per mode. */
@@ -22,11 +23,29 @@ export const MODE_SECONDS: Record<QuizMode, number> = {
   full: 3 * 60 * 60,
   mixed: 60 * 60,
   domain: 25 * 60,
+  misses: 25 * 60,
 };
 
 /** Pass mark, or null where the mode does not have one. */
 export function targetScorePct(mode: QuizMode): number | null {
   return mode === "full" ? 70 : null;
+}
+
+const MODE_LABELS: Record<QuizMode, string> = {
+  domain: "Domain Drill",
+  mixed: "Mixed Set",
+  full: "Full Exam",
+  misses: "Retry Misses",
+};
+
+/**
+ * Human label for a run. Shared because it was written inline in two places
+ * that disagreed the moment a fourth mode existed: the study report fell
+ * through to "Mixed" and the session header to "Domain null".
+ */
+export function describeMode(mode: QuizMode, domainId: number | null = null): string {
+  if (mode === "domain" && domainId) return `Domain ${domainId}`;
+  return MODE_LABELS[mode];
 }
 
 /**
@@ -45,8 +64,12 @@ export function shuffle<T>(arr: readonly T[], rng: () => number = Math.random): 
 /**
  * Selects the question set for a run.
  *
- * `domainId` only filters in "domain" mode; mixed and full deliberately ignore
- * it so a stale query parameter cannot narrow a full exam to one domain.
+ * `domainId` only filters in "domain" mode; mixed, full and misses deliberately
+ * ignore it so a stale query parameter cannot narrow a full exam to one domain.
+ *
+ * In "misses" mode the caller has already resolved which questions are due from
+ * `questionReviews` and passes that subset as `pool` — this stays a pure
+ * function over whatever it is given.
  */
 export function pickQuestions(
   pool: readonly Question[],

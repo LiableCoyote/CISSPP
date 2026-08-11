@@ -8,6 +8,7 @@ import { ACHIEVEMENT_DEFS } from "../../data/achievements";
 import { WEEK_META } from "../../data/weeks";
 import { xpToLevel } from "../../lib/xp";
 import { buildWeeklySummary } from "../../lib/analytics";
+import { describeMode } from "../../lib/scoring";
 
 const RECENT_ATTEMPT_LIMIT = 20;
 
@@ -225,7 +226,7 @@ export default function StudyReportPage() {
                 <tr key={a.id} className="border-b border-border/50 last:border-0">
                   <td className="py-1.5 text-dim">{format(parseISO(a.startedAt), "MMM d")}</td>
                   <td className="py-1.5">
-                    {a.mode === "domain" && a.domainId ? `Domain ${a.domainId}` : a.mode === "full" ? "Full exam" : "Mixed"}
+                    {describeMode(a.mode, a.domainId)}
                   </td>
                   <td className="py-1.5 text-right text-dim tabular-nums">{a.questionIds.length}</td>
                   <td

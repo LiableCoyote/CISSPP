@@ -3,12 +3,15 @@ import { getItem, setItem } from "./safeStorage";
 
 /**
  * v2 adds the `vaultWins` store and a `settings` block.
+ * v3 adds `questionReviews` — the spaced-repetition schedule for missed
+ * questions. Omitting it would have silently dropped that schedule on every
+ * restore, which reads as "the app forgot everything I got wrong".
  *
- * v1 files remain readable: `vaultWins` and `settings` are simply absent, and
- * the restore treats them as empty. Rejecting v1 here would strand every backup
- * a user has already downloaded.
+ * v1 and v2 files remain readable: the newer tables are simply absent, and the
+ * restore treats them as empty. Rejecting old files here would strand every
+ * backup a user has already downloaded.
  */
-export const EXPORT_VERSION = 2;
+export const EXPORT_VERSION = 3;
 const OLDEST_READABLE_VERSION = 1;
 
 /** Table names carried in a backup, in the order they are restored. */
@@ -25,6 +28,7 @@ const BACKUP_TABLES = [
   "notes",
   "resources",
   "vaultWins",
+  "questionReviews",
 ] as const;
 
 /** localStorage keys worth carrying across devices. Slot-scoped keys are not. */

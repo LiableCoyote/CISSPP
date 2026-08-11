@@ -8,11 +8,18 @@ import type { QuizMode } from "./scoring";
  * compared by opening three files. None was tested.
  */
 
-/** Flat bonus per quiz mode, on top of the accuracy component. */
+/**
+ * Flat bonus per quiz mode, on top of the accuracy component.
+ *
+ * A misses run pays more than a domain drill of the same length. Retrying what
+ * you got wrong is less pleasant than drilling what you already know, and it is
+ * the behaviour most worth reinforcing.
+ */
 export const QUIZ_MODE_BONUS: Record<QuizMode, number> = {
   full: 200,
   mixed: 50,
   domain: 25,
+  misses: 30,
 };
 
 /**
