@@ -5,6 +5,8 @@ import { parseISO } from "date-fns";
 import { db, type Profile, type Quest, type QuizAttempt } from "../../db/schema";
 import { buildDomainVelocity, detectStudySignals, type StudySignal } from "../../lib/analytics";
 import { buildRecommendations } from "../../lib/recommendations";
+import { breakdownMisses, buildRemediation } from "../../lib/remediation";
+import { countDue } from "../../lib/questionSrs";
 
 const DISMISS_KEY = "cisspp-dismissed-signals";
 const MAX_RECOMMENDATIONS = 2;
@@ -41,11 +43,19 @@ export default function NextUp({
 
   const flashcards = useLiveQuery(() => db.flashcards.toArray());
   const studyLog = useLiveQuery(() => db.studyLog.toArray());
+  const answers = useLiveQuery(() => db.answers.toArray());
+  const reviews = useLiveQuery(() => db.questionReviews.toArray());
+  // Only the domain is needed per question, and the map is rebuilt on every
+  // render otherwise; the question bank is already in the DB by this point.
+  const questionDomains = useLiveQuery(async () => {
+    const rows = await db.questions.toArray();
+    return new Map(rows.map((q) => [q.id, q.domainId]));
+  });
 
   // Only the top two recommendations render, and the list is priority-sorted, so
   // defaulting to [] made both visible links change identity once Dexie resolved
   // — a tap target that moves under the user's finger on mobile.
-  if (!flashcards || !studyLog) return null;
+  if (!flashcards || !studyLog || !answers || !reviews || !questionDomains) return null;
 
   const now = new Date();
   const dueCards = flashcards.filter((c) => parseISO(c.dueAt) <= now).length;
@@ -64,6 +74,10 @@ export default function NextUp({
     overdueCards,
   }).filter((s) => !dismissed.includes(s.id));
 
+  const remediation = buildRemediation(
+    breakdownMisses(answers, (id) => questionDomains.get(id)),
+  );
+
   const recommendations = buildRecommendations({
     profile,
     attempts,
@@ -73,6 +87,8 @@ export default function NextUp({
     overdueCards,
     currentWeek,
     currentDay,
+    dueMisses: countDue(reviews, now),
+    remediation,
   }).slice(0, MAX_RECOMMENDATIONS);
 
   const dismiss = (id: string) => {

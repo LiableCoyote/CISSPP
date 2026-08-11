@@ -23,6 +23,14 @@ export type RecommendationInput = {
   overdueCards: number;
   currentWeek: number;
   currentDay: number;
+  /** Questions due for retry. Omitted where the caller hasn't loaded them. */
+  dueMisses?: number;
+  /**
+   * Remediation actions derived from miss patterns, merged into the same ranked
+   * list. Passed in rather than computed here so this module keeps taking plain
+   * data and needs no access to the answers table.
+   */
+  remediation?: Recommendation[];
 };
 
 /**
@@ -30,10 +38,35 @@ export type RecommendationInput = {
  * a fixed schedule. Returns a ranked list; the Dashboard renders the top entries.
  */
 export function buildRecommendations(input: RecommendationInput): Recommendation[] {
-  const { profile, attempts, quests, velocity, dueCards, overdueCards, currentWeek, currentDay } =
-    input;
+  const {
+    profile,
+    attempts,
+    quests,
+    velocity,
+    dueCards,
+    overdueCards,
+    currentWeek,
+    currentDay,
+    dueMisses = 0,
+    remediation = [],
+  } = input;
 
-  const recs: Recommendation[] = [];
+  const recs: Recommendation[] = [...remediation];
+
+  // Retrying what you already got wrong beats a fresh drill on the same domain,
+  // so this sits above the weak-domain suggestion but below today's quests —
+  // the campaign is still the plan.
+  if (dueMisses > 0) {
+    recs.push({
+      id: "due-misses",
+      icon: "🎯",
+      title: `${dueMisses} question${dueMisses === 1 ? "" : "s"} due for retry`,
+      body: "Questions you've already got wrong, back on schedule. These are the cheapest marks available.",
+      to: "/quiz/session?mode=misses",
+      actionLabel: "Retry your misses",
+      priority: 95,
+    });
+  }
   const todayKey = format(new Date(), "yyyy-MM-dd");
   const studiedToday = profile.lastActiveDate === todayKey;
   const finished = attempts.filter((a) => a.finishedAt);

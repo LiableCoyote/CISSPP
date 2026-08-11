@@ -18,7 +18,7 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
   enough data to mean something
 - **Pacing** — median seconds a question against the real 72s exam budget, split
   by right and wrong, so fast-and-wrong shows up as the distinct problem it is
-- **Next Up recommendations** — ranks what to study next from your actual behaviour, plus signals for cramming, low-score runs, dormancy, and SRS backlog
+- **Next Up recommendations** — ranks what to study next from your actual behaviour, plus signals for cramming, low-score runs, dormancy, and SRS backlog; miss patterns route to the right drill (mindset → vault, knowledge → domain, misread → pacing)
 - **Gamification** — XP, 10 level titles, daily streak with freeze, 29 achievements across 8 categories with Common/Rare/Epic/Legendary difficulty tiers (all 29 reachable)
 - **Pace Board** — your standing against six reference study paces, scaled to your campaign week
 - **Study report** — printable summary (campaign, mastery, quiz history, achievements); save as PDF from the browser print dialog
@@ -156,8 +156,8 @@ that upstream range catches up.
 
 ### Tests
 
-333 tests over the pure logic: export/import and every rejection path, analytics
-and study signals, recommendations, campaign/date helpers, quiz scoring and
+351 tests over the pure logic: export/import and every rejection path, analytics
+and study signals, recommendations, miss remediation, campaign/date helpers, quiz scoring and
 question selection, question spaced repetition,
 confidence calibration, exam pacing, XP rewards, profile slots, quick-test generation, SM-2, XP
 levels, ISO week keys, guarded storage, seed idempotency snapshots and the
