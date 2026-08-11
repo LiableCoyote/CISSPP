@@ -24,6 +24,20 @@ import {
 import { format, subDays, parseISO, addDays, differenceInCalendarDays } from "date-fns";
 import { calibrationCurve, confidentMisses, type ConfidenceLevel } from "../../lib/calibration";
 import { pacingStats, describePacing, EXAM_BUDGET_SECONDS } from "../../lib/pacing";
+import { readiness, projectReadiness, coverageByDomain, type ReadinessBand } from "../../lib/readiness";
+import { useProfile } from "../../state/profile";
+
+const READINESS_LABELS: Record<ReadinessBand, string> = {
+  "on-track": "On track",
+  borderline: "Borderline",
+  "not-ready": "Not ready yet",
+};
+
+const READINESS_STYLES: Record<ReadinessBand, string> = {
+  "on-track": "border-high/40 bg-high/5",
+  borderline: "border-warn/40 bg-warn/5",
+  "not-ready": "border-danger/40 bg-danger/5",
+};
 
 /** The same wording the quiz picker uses, so the two screens agree. */
 const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
@@ -35,6 +49,11 @@ export default function StatsPage() {
   const studyLog = useLiveQuery(() => db.studyLog.toArray()) || [];
   const answers = useLiveQuery(() => db.answers.toArray()) || [];
   const flashcards = useLiveQuery(() => db.flashcards.toArray()) || [];
+  const questionDomains = useLiveQuery(async () => {
+    const rows = await db.questions.toArray();
+    return new Map(rows.map((q) => [q.id, q.domainId as number]));
+  });
+  const { profile } = useProfile();
 
   // Study heatmap — last 90 days
   const today = new Date();
@@ -115,6 +134,14 @@ export default function StatsPage() {
   const mindsetMisses = answers.filter((a) => a.flaggedMindset).length;
   const cisoScore = totalAnswered > 0 ? Math.round(((totalAnswered - mindsetMisses) / totalAnswered) * 100) : 100;
 
+  // Held back until the question→domain map resolves. Computed against an empty
+  // map, every tested domain would momentarily report as thin coverage — a
+  // caveat that is wrong rather than merely early.
+  const ready = questionDomains
+    ? readiness(attempts, coverageByDomain(answers, (id) => questionDomains.get(id)))
+    : null;
+  const projection = projectReadiness(attempts, profile?.examDate ?? null);
+
   // Confidence and timing were both already recorded on every answer; until now
   // nothing read them beyond a single counter.
   const calibration = calibrationCurve(answers);
@@ -143,6 +170,49 @@ export default function StatsPage() {
       )}
 
       {hasAnyData && (<>
+      {/* Exam readiness — deliberately first, and deliberately never a bare number */}
+      {ready && (
+      <section
+        aria-labelledby="readiness-heading"
+        className={`card mb-6 ${READINESS_STYLES[ready.band]}`}
+      >
+        <h3 id="readiness-heading" className="font-semibold mb-1">Exam Readiness</h3>
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <p className="text-4xl font-bold">{ready.scorePct}%</p>
+          <div>
+            <p className="text-sm font-semibold">{READINESS_LABELS[ready.band]}</p>
+            <p className="text-xs text-dim">
+              exam-weighted · {ready.confidence} confidence
+            </p>
+          </div>
+        </div>
+
+        {projection && (
+          <p className="text-sm mt-3">
+            <span aria-hidden="true">📈 </span>
+            At your last two weeks' rate ({projection.perDay > 0 ? "+" : ""}
+            {projection.perDay} pts/day) that trend line reaches{" "}
+            <span className="font-semibold">{projection.projectedPct}%</span> in{" "}
+            {projection.daysRemaining} days.{" "}
+            <span className="text-dim">
+              It's a straight line through recent scores, not a forecast — progress
+              plateaus and this can't know that.
+            </span>
+          </p>
+        )}
+
+        {/* The contract: the number never appears without these. */}
+        <ul className="mt-3 space-y-1" role="list">
+          {ready.caveats.map((c) => (
+            <li key={c} className="text-xs text-dim flex gap-2">
+              <span aria-hidden="true" className="shrink-0">·</span>
+              <span>{c}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+      )}
+
       {/* Heatmap */}
       <div className="card mb-6">
         <h3 className="font-semibold mb-3">90-Day Study Heatmap</h3>
