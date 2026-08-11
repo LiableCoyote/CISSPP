@@ -13,6 +13,11 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **Retry your misses** — questions you get wrong come back on their own SM-2
   schedule, hardest first; answer one correctly twice and it stops chasing you
 - **Study analytics** — 30/90-day timeline, per-domain learning curves with 7-day movement, stalled-domain detection, 90-day heatmap, score trends, CISO Thinking Score
+- **Confidence calibration** — whether you're right as often as you think, from
+  the 1-5 rating you give each answer; refuses to draw a curve until there's
+  enough data to mean something
+- **Pacing** — median seconds a question against the real 72s exam budget, split
+  by right and wrong, so fast-and-wrong shows up as the distinct problem it is
 - **Next Up recommendations** — ranks what to study next from your actual behaviour, plus signals for cramming, low-score runs, dormancy, and SRS backlog
 - **Gamification** — XP, 10 level titles, daily streak with freeze, 29 achievements across 8 categories with Common/Rare/Epic/Legendary difficulty tiers (all 29 reachable)
 - **Pace Board** — your standing against six reference study paces, scaled to your campaign week
@@ -151,9 +156,10 @@ that upstream range catches up.
 
 ### Tests
 
-300 tests over the pure logic: export/import and every rejection path, analytics
+333 tests over the pure logic: export/import and every rejection path, analytics
 and study signals, recommendations, campaign/date helpers, quiz scoring and
-question selection, question spaced repetition, XP rewards, profile slots, quick-test generation, SM-2, XP
+question selection, question spaced repetition,
+confidence calibration, exam pacing, XP rewards, profile slots, quick-test generation, SM-2, XP
 levels, ISO week keys, guarded storage, seed idempotency snapshots and the
 achievement engine. No jsdom, no component tests — Dexie runs on
 `fake-indexeddb`.

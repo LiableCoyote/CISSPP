@@ -22,6 +22,13 @@ import {
   Bar,
 } from "recharts";
 import { format, subDays, parseISO, addDays, differenceInCalendarDays } from "date-fns";
+import { calibrationCurve, confidentMisses, type ConfidenceLevel } from "../../lib/calibration";
+import { pacingStats, describePacing, EXAM_BUDGET_SECONDS } from "../../lib/pacing";
+
+/** The same wording the quiz picker uses, so the two screens agree. */
+const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
+  1: "Guessing", 2: "Unsure", 3: "Leaning", 4: "Confident", 5: "Certain",
+};
 
 export default function StatsPage() {
   const attempts = useLiveQuery(() => db.attempts.orderBy("startedAt").toArray()) || [];
@@ -107,6 +114,13 @@ export default function StatsPage() {
   const totalAnswered = answers.length;
   const mindsetMisses = answers.filter((a) => a.flaggedMindset).length;
   const cisoScore = totalAnswered > 0 ? Math.round(((totalAnswered - mindsetMisses) / totalAnswered) * 100) : 100;
+
+  // Confidence and timing were both already recorded on every answer; until now
+  // nothing read them beyond a single counter.
+  const calibration = calibrationCurve(answers);
+  const confident = confidentMisses(answers);
+  const pacing = pacingStats(answers);
+  const pacingNote = describePacing(pacing);
 
   const hasAnyData = attempts.length > 0 || studyLog.length > 0;
 
@@ -254,6 +268,123 @@ export default function StatsPage() {
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* Confidence calibration */}
+      <section aria-labelledby="calibration-heading" className="card mb-6">
+        <h3 id="calibration-heading" className="font-semibold mb-1">Confidence Calibration</h3>
+        <p className="text-xs text-dim mb-3">
+          Are you right as often as you think you are? Being wrong is survivable — not
+          knowing which answers to double-check is not.
+        </p>
+
+        {calibration.insufficient ? (
+          // Deliberately no chart. A calibration curve drawn from a handful of
+          // answers invites a study decision the data cannot support.
+          <p className="text-sm text-dim">
+            Rate your confidence on a few more questions — {calibration.rated} of{" "}
+            {calibration.needed} so far. Below that there isn't enough to read anything into.
+          </p>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-2 mb-3 flex-wrap">
+              <span
+                className={`text-2xl font-bold ${
+                  calibration.verdict === "well-calibrated" ? "text-high" : "text-warn"
+                }`}
+              >
+                {calibration.verdict === "well-calibrated"
+                  ? "Well calibrated"
+                  : calibration.verdict === "overconfident"
+                    ? "Overconfident"
+                    : "Underconfident"}
+              </span>
+              <span className="text-xs text-dim">
+                across {calibration.rated} rated answers
+              </span>
+            </div>
+
+            <ul className="space-y-2" role="list">
+              {calibration.buckets
+                .filter((b) => b.count > 0)
+                .map((b) => (
+                  <li key={b.confidence}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span>
+                        {CONFIDENCE_LABELS[b.confidence]}{" "}
+                        <span className="text-dim text-xs">({b.count})</span>
+                      </span>
+                      <span className={b.reliable ? "font-semibold" : "text-dim"}>
+                        {b.reliable ? `${b.accuracyPct}% right` : "too few to say"}
+                      </span>
+                    </div>
+                    {b.reliable && (
+                      <div
+                        className="h-2 bg-panel2 rounded-full overflow-hidden"
+                        role="img"
+                        aria-label={`Rated ${CONFIDENCE_LABELS[b.confidence]}: ${b.accuracyPct}% correct, against about ${b.expectedPct}% claimed`}
+                      >
+                        <div
+                          className={`h-full ${b.gap > 15 ? "bg-danger" : b.gap > 0 ? "bg-warn" : "bg-high"}`}
+                          style={{ width: `${b.accuracyPct}%` }}
+                        />
+                      </div>
+                    )}
+                  </li>
+                ))}
+            </ul>
+
+            {confident.confident > 0 && (
+              <p className="text-sm mt-3 text-dim">
+                You were sure (4–5) on {confident.confident} answers and wrong on{" "}
+                <span className={confident.wrong > 0 ? "text-danger font-semibold" : ""}>
+                  {confident.wrong}
+                </span>{" "}
+                of them. Those are your highest-signal review targets.
+              </p>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* Pacing against the real exam budget */}
+      <section aria-labelledby="pacing-heading" className="card mb-6">
+        <h3 id="pacing-heading" className="font-semibold mb-1">Pacing</h3>
+        <p className="text-xs text-dim mb-3">
+          The exam gives 150 questions in 180 minutes — about {EXAM_BUDGET_SECONDS}s each.
+        </p>
+
+        {pacingNote === null ? (
+          <p className="text-sm text-dim">
+            Answer a few more questions and your pace will show up here.
+          </p>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="text-center">
+                <p className="text-xs text-dim">Median</p>
+                <p className="text-xl font-bold">{pacing.medianSeconds}s</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-dim">When right</p>
+                <p className="text-xl font-bold text-high">{pacing.medianCorrectSeconds}s</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-dim">When wrong</p>
+                <p className="text-xl font-bold text-danger">{pacing.medianIncorrectSeconds}s</p>
+              </div>
+            </div>
+            <p className={`text-sm ${pacing.overBudget ? "text-warn" : "text-dim"}`}>
+              {pacingNote}
+            </p>
+            {pacing.discarded > 0 && (
+              <p className="text-xs text-dim mt-2">
+                {pacing.discarded} answer{pacing.discarded === 1 ? "" : "s"} over 10 minutes
+                excluded as walked-away.
+              </p>
+            )}
+          </>
+        )}
+      </section>
 
       {/* Miss category pie */}
       {pieData.length > 0 && (
