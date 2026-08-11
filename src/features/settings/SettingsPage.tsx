@@ -7,6 +7,11 @@ import { db } from "../../db/schema";
 import { exportData, importData } from "../../lib/export";
 import { downloadJSON } from "../../lib/download";
 import { getItem, setItem, removeItem } from "../../lib/safeStorage";
+import {
+  reminderSupport,
+  enableBackgroundReminder,
+  disableBackgroundReminder,
+} from "../../lib/reminders";
 import { getWeekKey } from "../../lib/streak";
 import ProfileSwitcher from "../../components/ProfileSwitcher";
 
@@ -21,6 +26,10 @@ export default function SettingsPage() {
   const [reminderTime, setReminderTime] = useState(() => {
     return getItem("cisspp-reminder-time") || "18:00";
   });
+  const [reminderStatus, setReminderStatus] = useState<string | null>(null);
+  // Capability probe, not a branch on behaviour: the summary is shown to the
+  // user so the toggle never implies more than the browser can do.
+  const [support] = useState(reminderSupport);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [pendingImport, setPendingImport] = useState<File | null>(null);
@@ -38,25 +47,47 @@ export default function SettingsPage() {
     setTimeout(() => setImportStatus(null), 2000);
   };
 
+  /**
+   * Turns on the in-app reminder, and asks for a system notification as a
+   * bonus rather than as the feature.
+   *
+   * The previous version requested permission, stored the time, fired one
+   * notification saying "You'll be reminded at 18:00 daily", and scheduled
+   * nothing. The reminder never arrived. Here the in-app nudge is the product —
+   * it works everywhere and honours the chosen time — and the background
+   * notification is attempted only where the browser supports it.
+   */
   const toggleReminder = async () => {
-    if (!reminderEnabled) {
-      if ("Notification" in window) {
-        const perm = await Notification.requestPermission();
-        if (perm === "granted") {
-          setItem("cisspp-reminder-enabled", "1");
-          setItem("cisspp-reminder-time", reminderTime);
-          setReminderEnabled(true);
-          new Notification("CISSPP Reminders Enabled", {
-            body: `You'll be reminded at ${reminderTime} daily.`,
-            icon: new URL("icons/icon-192.png", document.baseURI).href,
-          });
-        } else {
-          setImportStatus("Notification permission denied.");
-        }
-      }
-    } else {
+    if (reminderEnabled) {
       removeItem("cisspp-reminder-enabled");
       setReminderEnabled(false);
+      await disableBackgroundReminder();
+      setReminderStatus("Reminders off.");
+      return;
+    }
+
+    setItem("cisspp-reminder-enabled", "1");
+    setItem("cisspp-reminder-time", reminderTime);
+    setReminderEnabled(true);
+    // Reported before the permission round-trip, not after. The in-app reminder
+    // is already live at this point, and requestPermission can sit unanswered
+    // indefinitely while the user ignores the prompt — leaving them with a
+    // toggle that flipped and said nothing.
+    setReminderStatus("On. You'll see the reminder in the app.");
+
+    // Permission is worth asking for only if the browser could act on it.
+    if (!support.notifications || !support.background) return;
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") return;
+      if (await enableBackgroundReminder()) {
+        setReminderStatus(
+          "On. You'll see it in the app, and your browser may also show a system reminder.",
+        );
+      }
+    } catch {
+      // Permission prompts can reject outright in some embedded contexts. The
+      // in-app reminder is unaffected, so there is nothing to tell the user.
     }
   };
 
@@ -242,11 +273,16 @@ export default function SettingsPage() {
 
       <div className="card mb-4">
         <h3 className="font-semibold mb-1">Daily Reminder</h3>
-        <p className="text-sm text-dim mb-3">
-          Enable a daily notification to keep your streak alive. Browser permission required.
+        <p className="text-sm text-dim mb-2">
+          A nudge on the dashboard when you haven't logged anything by your chosen time.
         </p>
+        {/* Says what this browser will really do. No web app can schedule a
+            notification for a specific time without a server to send it. */}
+        <p className="text-xs text-dim mb-3">{support.summary}</p>
         <div className="flex items-center justify-between gap-3">
-          <label htmlFor="reminder-time" className="text-sm text-dim">Reminder time</label>
+          <label htmlFor="reminder-time" className="text-sm text-dim">
+            Preferred time
+          </label>
           <input
             id="reminder-time"
             type="time"
@@ -265,6 +301,9 @@ export default function SettingsPage() {
         >
           {reminderEnabled ? "Disable Reminder" : "Enable Reminder"}
         </button>
+        <div role="status" aria-live="polite" className="min-h-[1.25rem]">
+          {reminderStatus && <p className="text-sm text-accent mt-2">{reminderStatus}</p>}
+        </div>
       </div>
 
       <div className="card mb-4">

@@ -28,7 +28,15 @@ export default defineConfig({
         // a navigation fallback isn't strictly required, but set it anyway
         // so deep-link reloads still hit the shell.
         navigateFallback: "index.html",
+        // sw-periodic.js is excluded: it is pulled in by importScripts below,
+        // so precaching it would ship a second copy that nothing loads.
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        globIgnores: ["**/sw-periodic.js"],
+        // The periodic-sync reminder handler. Added via importScripts rather
+        // than by switching to injectManifest — the generateSW + "prompt"
+        // arrangement above is load-bearing, and rewriting the worker strategy
+        // to add one event listener would risk the update path for no gain.
+        importScripts: ["sw-periodic.js"],
         // No runtimeCaching: fonts are bundled now, so every asset the app
         // needs is in the precache and nothing is fetched from a third party.
       },

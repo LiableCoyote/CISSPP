@@ -27,6 +27,10 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **Study report** — printable summary (campaign, mastery, quiz history, achievements); save as PDF from the browser print dialog
 - **Share card** — PNG export with weekly deltas and a progress headline
 - **Pomodoro FAB** that logs focus minutes automatically
+- **Daily reminder** — an in-app nudge at your preferred time on every platform,
+  plus a best-effort system notification where the browser can wake the app.
+  No web app can schedule a notification for a chosen time without a server, and
+  the UI says so rather than implying otherwise
 - **Mobile-first** — bottom nav, 48px tap targets, swipe gestures, safe-area support, haptic feedback
 - **PWA** — installs to home screen, works 100% offline after first load
 - **Fast to start** — 290KB entry chunk; the question bank, flashcard deck and
@@ -159,10 +163,11 @@ that upstream range catches up.
 
 ### Tests
 
-380 tests over the pure logic: export/import and every rejection path, analytics
+394 tests over the pure logic: export/import and every rejection path, analytics
 and study signals, recommendations, miss remediation, campaign/date helpers, quiz scoring and
 question selection, question spaced repetition,
-confidence calibration, exam pacing, readiness weighting and projection, XP rewards, profile slots, quick-test generation, SM-2, XP
+confidence calibration, exam pacing, readiness weighting and projection,
+reminder scheduling and capability detection, XP rewards, profile slots, quick-test generation, SM-2, XP
 levels, ISO week keys, guarded storage, seed idempotency snapshots and the
 achievement engine. No jsdom, no component tests — Dexie runs on
 `fake-indexeddb`.

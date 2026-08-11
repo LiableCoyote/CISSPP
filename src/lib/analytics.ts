@@ -241,7 +241,14 @@ export function weeklyHeadline(s: WeeklySummary, streak: number): string {
 /* ───────────────────────── Fatigue & risk detection ───────────────────────── */
 
 export type StudySignal = {
-  id: "cramming" | "struggling" | "dormant" | "backlog" | "domain-cram" | "domain-hoard";
+  id:
+    | "cramming"
+    | "struggling"
+    | "dormant"
+    | "backlog"
+    | "domain-cram"
+    | "domain-hoard"
+    | "daily-reminder";
   severity: "warn" | "danger" | "info";
   icon: string;
   title: string;
@@ -288,12 +295,44 @@ export function detectStudySignals(opts: {
   lastActiveDate: string | null;
   streak: number;
   overdueCards: number;
+  /**
+   * True when the reminder is on and its preferred time has passed with nothing
+   * logged today. Computed by the caller via `shouldNudge` so this module needs
+   * no access to storage.
+   */
+  nudgeDue?: boolean;
   /** Injectable so the whole signal set can be evaluated at a fixed instant. */
   now?: Date;
 }): StudySignal[] {
-  const { studyLog, attempts, lastActiveDate, streak, overdueCards, now: today = new Date() } = opts;
+  const {
+    studyLog,
+    attempts,
+    lastActiveDate,
+    streak,
+    overdueCards,
+    nudgeDue = false,
+    now: today = new Date(),
+  } = opts;
   const signals: StudySignal[] = [];
   const todayKey = format(today, "yyyy-MM-dd");
+
+  // The day-zero case. `dormant` below only fires after three days, so without
+  // this the reminder the user actually switched on had nothing to show for
+  // itself on the day it mattered.
+  if (nudgeDue) {
+    signals.push({
+      id: "daily-reminder",
+      severity: "info",
+      icon: "⏰",
+      title: "Nothing logged today",
+      body:
+        streak > 0
+          ? `Your ${streak}-day streak is still intact — one quiz or review session keeps it that way.`
+          : "A single quiz or review session starts a streak.",
+      to: "/quiz",
+      actionLabel: "Start a quiz",
+    });
+  }
 
   // Cramming — too much crammed into one day.
   const todayLog = studyLog.find((l) => l.date === todayKey);

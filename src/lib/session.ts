@@ -1,5 +1,6 @@
 import { format, subDays } from "date-fns";
 import { db, type Profile } from "../db/schema";
+import { publishLastActive } from "./reminders";
 
 export type SessionLog = {
   minutes: number;
@@ -42,6 +43,11 @@ export async function logStudySession(
       flashcardsReviewed: entry.flashcardsReviewed ?? 0,
     });
   }
+
+  // Publish for the service worker before the early return: a second session on
+  // the same day still needs the reminder state to be current, and the streak
+  // being already advanced says nothing about whether the cache was written.
+  await publishLastActive(today);
 
   // Already counted today — nothing to advance.
   if (profile.lastActiveDate === today) return {};

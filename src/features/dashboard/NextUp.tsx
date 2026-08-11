@@ -7,6 +7,8 @@ import { buildDomainVelocity, detectStudySignals, type StudySignal } from "../..
 import { buildRecommendations } from "../../lib/recommendations";
 import { breakdownMisses, buildRemediation } from "../../lib/remediation";
 import { countDue } from "../../lib/questionSrs";
+import { shouldNudge } from "../../lib/reminders";
+import { getItem } from "../../lib/safeStorage";
 
 const DISMISS_KEY = "cisspp-dismissed-signals";
 const MAX_RECOMMENDATIONS = 2;
@@ -72,6 +74,14 @@ export default function NextUp({
     lastActiveDate: profile.lastActiveDate,
     streak: profile.streak,
     overdueCards,
+    // The half of the reminder feature that works on every platform. The
+    // background notification is best-effort; this is not.
+    nudgeDue: shouldNudge({
+      enabled: getItem("cisspp-reminder-enabled") === "1",
+      lastActiveDate: profile.lastActiveDate,
+      preferredTime: getItem("cisspp-reminder-time") || "18:00",
+      now,
+    }),
   }).filter((s) => !dismissed.includes(s.id));
 
   const remediation = buildRemediation(
