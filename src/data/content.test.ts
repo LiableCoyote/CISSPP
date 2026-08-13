@@ -95,18 +95,18 @@ describe("question bank — not gameable", () => {
    * with each batch.** They exist now so the number cannot drift back up while
    * the work is in progress.
    *
-   *   longest-is-correct   95% -> 54% so far  ->  target below 45% (chance is 25%)
-   *   conspicuously longer 195 -> 101 so far  ->  target 0
+   *   longest-is-correct   95% -> 42% so far  ->  target below 45% (chance is 25%)
+   *   conspicuously longer 195 -> 60 so far  ->  target 0
    *
-   * Done: extra.D1-D4, extra.D5-D8, extra2, extra3, scenarios.
-   * Remaining: D1-D4, D5-D8.
+   * Done: D1-D4, extra.D1-D4, extra.D5-D8, extra2, extra3, scenarios.
+   * Remaining: D5-D8.
    *
    * Watch the other direction too: extra2 currently sits at 0%, which is a
    * reverse tell — "never pick the longest" would eliminate an option. A
    * balancing pass and a floor assertion are due once every file is rewritten.
    */
-  const LONGEST_IS_CORRECT_CEILING = 0.55;
-  const CONSPICUOUS_CEILING = 101;
+  const LONGEST_IS_CORRECT_CEILING = 0.43;
+  const CONSPICUOUS_CEILING = 60;
 
   it("does not make the correct answer the longest option", () => {
     const longest = ALL_QUESTIONS.filter((q) => {
