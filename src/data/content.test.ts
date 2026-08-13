@@ -88,25 +88,19 @@ describe("question bank — not gameable", () => {
   const share = (n: number) => n / ALL_QUESTIONS.length;
 
   /**
-   * RATCHETS, not final thresholds.
+   * The de-biasing pass is complete: all seven source files rewritten.
    *
-   * The distractor rewrite is landing one source file at a time, so these two
-   * assert "no worse than today" rather than the eventual target. **Lower them
-   * with each batch.** They exist now so the number cannot drift back up while
-   * the work is in progress.
+   *   longest-is-correct   95% -> 29%   (chance is 25%)
+   *   conspicuously longer 195 -> 24
    *
-   *   longest-is-correct   95% -> 42% so far  ->  target below 45% (chance is 25%)
-   *   conspicuously longer 195 -> 60 so far  ->  target 0
-   *
-   * Done: D1-D4, extra.D1-D4, extra.D5-D8, extra2, extra3, scenarios.
-   * Remaining: D5-D8.
-   *
-   * Watch the other direction too: extra2 currently sits at 0%, which is a
-   * reverse tell — "never pick the longest" would eliminate an option. A
-   * balancing pass and a floor assertion are due once every file is rewritten.
+   * These are now real thresholds rather than ratchets, and the ceiling has a
+   * floor beside it. A bank where the correct answer is *never* the longest is
+   * just as gameable as one where it always is — "eliminate the longest" would
+   * work — and a ceiling alone would happily pass a perfectly inverted tell.
    */
-  const LONGEST_IS_CORRECT_CEILING = 0.43;
-  const CONSPICUOUS_CEILING = 60;
+  const LONGEST_IS_CORRECT_CEILING = 0.45;
+  const LONGEST_IS_CORRECT_FLOOR = 0.15;
+  const CONSPICUOUS_CEILING = 25;
 
   it("does not make the correct answer the longest option", () => {
     const longest = ALL_QUESTIONS.filter((q) => {
@@ -114,6 +108,7 @@ describe("question bank — not gameable", () => {
       return lengths[q.answerIndex] === Math.max(...lengths);
     }).length;
     expect(share(longest)).toBeLessThanOrEqual(LONGEST_IS_CORRECT_CEILING);
+    expect(share(longest)).toBeGreaterThanOrEqual(LONGEST_IS_CORRECT_FLOOR);
   });
 
   it("does not make the correct answer conspicuously longer than its distractors", () => {

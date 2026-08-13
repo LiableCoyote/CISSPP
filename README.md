@@ -6,9 +6,11 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 
 - **8-week campaign** with 56 seeded quests mapped to the standard CISSP study plan
 - **246 CISSP-style questions** with CISO-mindset detection (technician trap + speed-reader nudges) and per-question confidence ratings
-- **Options are shuffled per attempt** — the bank stores the correct answer at
-  option B in 196 of 246 questions, so always picking B used to score 79.7%,
-  past the pass mark, with no CISSP knowledge at all
+- **Not gameable** — an audit found the bank beatable with no CISSP knowledge:
+  always picking B scored 79.7% and always picking the longest option scored
+  95%, both past the pass mark. Options are now shuffled per attempt and every
+  distractor has been rewritten; both cheats score at chance (26% and 29%), and
+  `src/data/content.test.ts` fails the build if either tell returns
 - **179 high-yield flashcards** across all 8 domains with SM-2 spaced repetition, swipe gestures, and search/domain/tag filtering
 - **Memorization vault** — 12 drag-to-order sequences (BCP, NIST IR, OSI, RMF, forensics, IAAA, data lifecycle, change management, DR test rigor, SDLC, Kerberos, evidence lifecycle) and 12 reference tables
 - **Vault Quick Test** — 5 timed recall questions generated from any sequence's canonical order
