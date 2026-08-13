@@ -95,11 +95,14 @@ describe("question bank — not gameable", () => {
    * with each batch.** They exist now so the number cannot drift back up while
    * the work is in progress.
    *
-   *   longest-is-correct   today 95%  ->  target below 45% (chance is 25%)
-   *   conspicuously longer today 195  ->  target 0
+   *   longest-is-correct   95% -> 76% so far  ->  target below 45% (chance is 25%)
+   *   conspicuously longer 195 -> 159 so far  ->  target 0
+   *
+   * Done: extra.D1-D4, extra.D5-D8. Remaining: D1-D4, D5-D8, extra2, extra3,
+   * scenarios.
    */
-  const LONGEST_IS_CORRECT_CEILING = 0.96;
-  const CONSPICUOUS_CEILING = 195;
+  const LONGEST_IS_CORRECT_CEILING = 0.77;
+  const CONSPICUOUS_CEILING = 159;
 
   it("does not make the correct answer the longest option", () => {
     const longest = ALL_QUESTIONS.filter((q) => {

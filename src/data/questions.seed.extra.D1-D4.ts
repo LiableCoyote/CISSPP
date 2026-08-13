@@ -6,7 +6,7 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 1,
     prompt: "Which of the following BEST characterizes the relationship between risk appetite and risk tolerance?",
     options: [
-      "Risk appetite is the maximum loss an organization will accept; risk tolerance is the strategy to avoid it",
+      "Risk appetite is the maximum loss an organisation will accept, and risk tolerance is the strategy it chooses to avoid ever exceeding that",
       "Risk appetite is management's willingness to pursue objectives; risk tolerance is the level of variance acceptable around that appetite",
       "They are synonymous terms used interchangeably in governance frameworks",
       "Risk tolerance is set by the board; risk appetite is measured by external auditors",
@@ -34,7 +34,7 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     prompt: "A business unit refuses to implement a compensating control for a known risk despite executive sign-off. The BEST course of action is to:",
     options: [
       "Document the finding and escalate for executive risk acceptance with formal sign-off",
-      "Implement the control unilaterally to protect the organization",
+      "Implement the control unilaterally to protect the organisation without waiting for approval",
       "Withdraw the security team's sign-off from the project",
       "Accept that some risks cannot be mitigated and move on",
     ],
@@ -50,7 +50,7 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     prompt: "Which control type is MOST effective at reducing likelihood in the context of a phishing attack?",
     options: [
       "Detective controls (SIEM, email gateway logging)",
-      "Corrective controls (incident response procedures)",
+      "Corrective controls such as documented incident response procedures",
       "Preventive controls (MFA, email filtering, user training)",
       "Compensating controls (segment networks)",
     ],
@@ -65,10 +65,10 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 1,
     prompt: "A penetration test reveals SQL injection on a non-critical reporting tool. The vendor says a patch is 6 months away. What is the BEST response?",
     options: [
-      "Accept the risk until the patch is available",
-      "Demand the vendor prioritize the patch or switch vendors",
+      "Accept the risk until the vendor ships a patch, with no interim control",
+      "Escalate to the vendor for a prioritised patch and start evaluating replacement products in parallel",
       "Implement a compensating control (WAF rule) and risk-accept the gap with documented justification",
-      "Take the tool offline immediately",
+      "Take the tool offline immediately and absorb the outage until a fix ships",
     ],
     answerIndex: 2,
     explanation:
@@ -80,7 +80,7 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     id: "ex1-d1-06",
     domainId: 1,
     prompt: "Which governance framework is BEST suited for organizations that prioritize rapid innovation and market responsiveness?",
-    options: ["ISO 27001 (strict certification-driven)", "NIST Cybersecurity Framework (flexible, outcomes-focused)", "SOC 2 Type II (historical review-only)", "HIPAA Security Rule (regulatory minimum)"],
+    options: ["ISO 27001 (strict certification-driven)", "NIST Cybersecurity Framework (flexible, outcomes-focused)", "SOC 2 Type II (historical review-only)", "The HIPAA Security Rule, treated as the regulatory minimum to clear"],
     answerIndex: 1,
     explanation:
       "NIST CSF allows customization to business context. Flexibility supports innovation. ISO 27001 is prescriptive; SOC 2 is attestation; HIPAA is sector-specific.",
@@ -92,10 +92,10 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 1,
     prompt: "A startup with $10M in ARR lacks a formal CISO and security program. Which FIRST step adds the MOST risk reduction per dollar?",
     options: [
-      "Hire a full-time CISO ($250K/year)",
+      "Hire a full-time CISO at around $250K a year and defer all tooling spend",
       "Contract a CISO advisor (fractional) and establish basic policies + MFA + password manager",
-      "Conduct a comprehensive pen test",
-      "Implement a SIEM",
+      "Commission a comprehensive external penetration test before any policy or control work begins",
+      "Deploy a SIEM first so every security event is centrally collected",
     ],
     answerIndex: 1,
     explanation:
@@ -124,7 +124,7 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 1,
     prompt: "Which statement BEST reflects the role of the board in security governance?",
     options: [
-      "The board approves the security budget annually and delegates all oversight to the CISO",
+      "The board approves the security budget annually and delegates all further oversight to the CISO",
       "The board sets the risk appetite and monitors KPIs; the CISO manages day-to-day execution",
       "The board is responsible for patch management and vulnerability scanning",
       "The board has no direct role in security — that is the CIO's domain",
@@ -141,9 +141,9 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     prompt: "A vendor assessment reveals a critical finding (no encryption in transit), but the vendor has no timeline to fix it. The business unit says the contract can't be renegotiated. BEST action?",
     options: [
       "Use a compensating control at the network edge and formally risk-accept in writing",
-      "End the contract immediately",
-      "Accept the risk verbally from the business owner",
-      "Require the vendor to implement the fix within 30 days regardless of contract",
+      "Terminate the contract at once and absorb the operational disruption",
+      "Accept the risk on a verbal agreement from the business owner, unrecorded",
+      "Require the vendor to implement the fix within 30 days regardless of what the contract says",
     ],
     answerIndex: 0,
     explanation:
@@ -158,8 +158,8 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     options: [
       "The vulnerability is low-severity and affects a non-production system",
       "The vendor has not released a patch yet, but compensating controls are in place",
-      "The CISO is on vacation",
-      "The system is scheduled for replacement in 2 years",
+      "The CISO is unavailable to sign off, so the remediation deadline passes",
+      "The system is due for replacement in two years, so no interim action is taken at all",
     ],
     answerIndex: 1,
     explanation:
@@ -175,7 +175,7 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
       "BCP covers all business functions; DRP focuses on IT recovery",
       "DRP is for data centers; BCP is for office locations",
       "BCP is internal; DRP involves external vendors",
-      "There is no difference — the terms are used interchangeably",
+      "There is no practical difference — the two terms are used interchangeably",
     ],
     answerIndex: 0,
     explanation:
@@ -188,10 +188,10 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 1,
     prompt: "An organization's risk register shows 15 high-severity risks and $2M in annual losses. The CISO budget is $5M. Which approach BEST prioritizes spending?",
     options: [
-      "Treat all 15 equally; allocate $333K per risk",
+      "Treat all fifteen risks as equivalent and give each an identical share",
       "Rank risks by likelihood × impact and fund controls for the top 5–7 that consume the residual risk",
-      "Fund only the largest losses first, ignoring likelihood",
-      "Divide the budget equally across all risk owners",
+      "Fund the largest potential losses first and disregard how likely each is",
+      "Divide the budget equally between the risk owners and allow each of them to spend their share freely",
     ],
     answerIndex: 1,
     explanation:
@@ -236,10 +236,10 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 2,
     prompt: "Which of the following is the BEST approach to classify data?",
     options: [
-      "Ask each department head to classify data themselves with no guidance",
-      "Use criteria such as sensitivity, regulatory requirements, and business impact; assign ownership; and maintain a classification matrix",
-      "Classify all data as confidential to maximize security",
-      "Classify based only on data type (PII vs. non-PII)",
+      "Let each department head classify their own data using whatever criteria they prefer, with no oversight at all",
+      "Classify by sensitivity, regulatory exposure and business impact, assign an owner per class, and keep a matrix",
+      "Classify everything as confidential so nothing is ever under-protected",
+      "Classify solely by data type, separating PII from everything else",
     ],
     answerIndex: 1,
     explanation:
@@ -255,7 +255,7 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
       "Approve — the employee is trusted",
       "Deny and require the use of a temporary device with data stored on the company cloud",
       "Approve if the employee promises to keep the laptop physically secure",
-      "Require them to use the airport WiFi instead of connecting to mobile hotspot",
+      "Require them to use the airport WiFi instead of connecting to a personal mobile hotspot",
     ],
     answerIndex: 1,
     explanation:
@@ -270,7 +270,7 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     options: [
       "Requiring the employee to use a password",
       "Implementing remote wipe and file-level encryption of sensitive folders",
-      "Having the employee sign an AUP acknowledging the risk",
+      "Having the employee sign an acceptable use policy that acknowledges the risk",
       "Using a screen lock with a 5-minute timeout",
     ],
     answerIndex: 1,
@@ -284,10 +284,10 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 2,
     prompt: "An audit finds that sensitive documents are stored in a shared Google Drive folder with read access to everyone in the company. What control addresses this FIRST?",
     options: [
-      "Implement file encryption on the Google Drive",
+      "Encrypt the files in place and leave the existing sharing unchanged",
       "Review access permissions, restrict to named individuals with a business need, and enable audit logging",
-      "Move all documents to a locked cabinet",
-      "Require users to password-protect the folder",
+      "Move the documents into locked physical storage and withdraw electronic access from everyone who has it",
+      "Require every user to set their own password on the shared folder",
     ],
     answerIndex: 1,
     explanation:
@@ -316,10 +316,10 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 2,
     prompt: "An asset inventory audit reveals 40 devices with unknown ownership and no update history. What is the BEST remediation?",
     options: [
-      "Take the devices offline immediately",
+      "Take every unidentified device offline at once and investigate later",
       "Establish a device management system, assign owners, enforce patch policies, and remove unaccounted assets",
-      "Document the devices and monitor them for suspicious activity",
-      "Ask users to update the inventory manually",
+      "Record the devices in a tracking spreadsheet and monitor them for suspicious activity over the following quarter",
+      "Ask users to register their own devices in the inventory when convenient",
     ],
     answerIndex: 1,
     explanation:
@@ -332,10 +332,10 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 2,
     prompt: "Which data retention policy guideline BEST balances compliance and storage costs?",
     options: [
-      "Keep all data forever for forensic purposes",
-      "Delete all data as soon as it is no longer operationally needed",
-      "Retain based on legal/regulatory requirements, contractual obligations, and operational need; delete upon expiration",
-      "Retain indefinitely unless the data owner requests deletion",
+      "Keep everything indefinitely so it is always available for forensic use",
+      "Delete data as soon as it stops being operationally useful, whatever the legal or contractual obligations might say",
+      "Retain to satisfy legal, regulatory and contractual obligations plus operational need, then delete on expiry",
+      "Retain indefinitely unless the data owner explicitly asks for deletion",
     ],
     answerIndex: 2,
     explanation:
@@ -348,9 +348,9 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 2,
     prompt: "A third-party processor stores your customer PII but refuses to provide a Data Processing Agreement. What is the appropriate escalation?",
     options: [
-      "Accept the risk because the vendor is already trusted",
+      "Accept the risk on the basis that the vendor is an established supplier",
       "Escalate to Legal and Privacy; a DPA is a legal requirement for many jurisdictions (e.g., GDPR)",
-      "Have the vendor sign an internal memo in lieu of a DPA",
+      "Have the vendor sign an internal memo and treat that as being equivalent to a formal data processing agreement",
       "Continue the relationship but add a compensating control (vendor audit)",
     ],
     answerIndex: 1,
@@ -363,7 +363,7 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     id: "ex1-d3-01",
     domainId: 3,
     prompt: "Which cryptographic property ensures that a hash value cannot be reversed to recover the original input?",
-    options: ["Symmetry", "One-wayness (preimage resistance)", "Collusion resistance", "Determinism"],
+    options: ["Symmetry between input and output", "One-wayness (preimage resistance)", "Collusion resistance between parties", "Determinism for identical inputs"],
     answerIndex: 1,
     explanation:
       "One-wayness means you cannot feasibly compute the input from the hash output. Determinism means the same input always produces the same hash (desired, not a weakness).",
@@ -375,10 +375,10 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 3,
     prompt: "In a TLS handshake, the server presents a certificate signed by a Certificate Authority. What does this signature verify?",
     options: [
-      "That the server's private key is secure",
-      "That the CA has confirmed the server's identity and that the public key in the certificate is authentic",
-      "That the data in transit has not been modified",
-      "That the server is not on a blacklist",
+      "That the server's private key was generated and is stored securely",
+      "That a CA has verified the server's identity and the public key in the certificate is authentic",
+      "That data in transit cannot be altered in any way without the client detecting the change immediately",
+      "That the server appears on no published revocation blacklist",
     ],
     answerIndex: 1,
     explanation:
@@ -393,7 +393,7 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     options: [
       "It uses AES, which is computationally expensive",
       "The IV (initialization vector) is too short and reused, enabling IV collision attacks",
-      "It requires pre-shared keys on all devices, which is difficult to manage",
+      "It requires pre-shared keys on every device, which becomes difficult to manage at any scale",
       "It does not support roaming between access points",
     ],
     answerIndex: 1,
@@ -407,10 +407,10 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 3,
     prompt: "In a zero-trust architecture, which principle is MOST critical?",
     options: [
-      "Trust all internal traffic; verify all external traffic",
-      "Never trust, always verify — enforce authentication and authorization for every access request, regardless of network location",
-      "Use strong encryption; other controls are secondary",
-      "Implement perimeter security first; microcontrols are optional",
+      "Trust traffic that originates inside the network and verify only what crosses the outer network perimeter",
+      "Never trust, always verify: authenticate and authorise every request regardless of network location",
+      "Encrypt everything strongly and treat other controls as secondary to that",
+      "Harden the perimeter first and treat per-resource controls as optional",
     ],
     answerIndex: 1,
     explanation:
@@ -423,10 +423,10 @@ export const EXTRA_QUESTIONS_D1_D4: Question[] = [
     domainId: 3,
     prompt: "Which of the following BEST describes defense-in-depth?",
     options: [
-      "Implement one very strong control to protect critical assets",
+      "Concentrate on one very strong control around the most critical assets",
       "Layer multiple controls at different levels so that compromise of one does not guarantee breach",
-      "Use only network-based controls to prevent intrusion",
-      "Trust technical controls over administrative controls",
+      "Rely on network-based controls alone, since intrusions almost always arrive over the network anyway",
+      "Prefer technical controls, since administrative ones rely on compliance",
     ],
     answerIndex: 1,
     explanation:

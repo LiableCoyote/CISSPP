@@ -6,10 +6,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 5,
     prompt: "Which role is responsible for defining access control policy?",
     options: [
-      "The IT operations team based on technical capability",
+      "The IT operations team, chosen on technical capability alone",
       "The data owner or business process owner, informed by security",
-      "The security team unilaterally to ensure consistency",
-      "Whichever team has the most influence",
+      "The security team acting unilaterally, so classification stays consistent",
+      "Whichever team has the most influence in the organisation",
     ],
     answerIndex: 1,
     explanation:
@@ -22,10 +22,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 5,
     prompt: "An employee requests permanent standing access to the production database to 'save time' on troubleshooting. The appropriate response is:",
     options: [
-      "Grant the access — the employee is experienced and trusted",
+      "Grant standing access, since the employee is experienced and already trusted",
       "Deny standing access and implement just-in-time (JIT) elevated access with approval workflow",
-      "Grant access but require the employee to log off daily",
-      "Implement password changes every 30 days as a compensating control",
+      "Grant the access but require the employee to log off at the end of each day",
+      "Require a password change every 30 days and treat that as a compensating control that offsets it",
     ],
     answerIndex: 1,
     explanation:
@@ -38,10 +38,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 5,
     prompt: "Which of the following BEST describes separation of duties (SoD)?",
     options: [
-      "No single employee can perform a high-risk transaction without approval from a manager",
-      "No single user can perform two conflicting actions (e.g., approve a purchase order and receive the goods) without compensation",
-      "Users in different departments do not share access to the same systems",
-      "All critical transactions require encryption",
+      "No single employee may complete any high-risk transaction without a line manager reviewing and formally approving it beforehand",
+      "No single user can perform two conflicting actions, such as approving a purchase order and receiving the goods",
+      "Users in different departments never share access to the same underlying systems",
+      "All critical transactions must be encrypted end to end",
     ],
     answerIndex: 1,
     explanation:
@@ -54,10 +54,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 5,
     prompt: "A new hire needs access to systems A, B, and C but should not have access to D. In role-based access control (RBAC), the BEST approach is:",
     options: [
-      "Create a custom role combining permissions from A, B, and C",
-      "Grant individual permissions to A, B, and C directly to the user",
+      "Create a bespoke role that combines the permissions from A, B and C for this user",
+      "Grant the individual permissions for A, B and C directly to the user's account",
       "Assign the user to a job-role that includes A, B, and C; ensure D is not included",
-      "Grant access to A, B, C, and D, then manually remove D permissions",
+      "Grant access to A, B, C and D together, then manually strip the D permissions afterwards",
     ],
     answerIndex: 2,
     explanation:
@@ -70,10 +70,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 5,
     prompt: "Which of the following is a weakness in using the same password across multiple systems?",
     options: [
-      "It makes passwords easier to remember",
-      "If one system is compromised, the attacker gains access to all systems; also, password resets are harder to coordinate",
-      "It reduces the number of logins the user must perform",
-      "It simplifies access control administration",
+      "It makes the password easier for the user to remember",
+      "If one system is compromised the attacker reaches every other one, and resets are hard to coordinate",
+      "It reduces the number of separate logins the user has to perform each day",
+      "It simplifies access-control administration across the estate and reduces helpdesk password resets significantly",
     ],
     answerIndex: 1,
     explanation:
@@ -86,10 +86,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 5,
     prompt: "An access review reveals that 15% of active accounts have no sign-in activity in the past 90 days. What is the BEST response?",
     options: [
-      "Disable the accounts immediately to reduce the attack surface",
+      "Disable every one of the affected accounts immediately so the attack surface shrinks straight away today",
       "Contact the account owners to verify if the accounts are still needed; disable or deactivate if not",
-      "Implement stricter access policies going forward",
-      "Document the finding and move on",
+      "Implement stricter access provisioning policies for accounts created from now on",
+      "Document the finding in the audit log and take no further action",
     ],
     answerIndex: 1,
     explanation:
@@ -102,10 +102,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 5,
     prompt: "Which multi-factor authentication (MFA) method is MOST resistant to phishing?",
     options: [
-      "SMS codes (OTP)",
-      "Email-based OTP",
+      "SMS one-time codes sent to a mobile number",
+      "One-time codes emailed to the user's registered address",
       "Hardware security keys (FIDO2) bound to the domain",
-      "Time-based OTP (TOTP) apps",
+      "Time-based one-time codes from an authenticator app",
     ],
     answerIndex: 2,
     explanation:
@@ -118,10 +118,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 5,
     prompt: "A contractor's account was never disabled 6 months after contract end. The hiring manager says 'no harm done; they never logged in post-contract'. What is the appropriate response?",
     options: [
-      "Document the incident and close the finding",
+      "Document the incident in the risk register and close the finding without any further action",
       "Immediately disable the account and investigate the joiner-mover-leaver (JML) process to prevent recurrence",
-      "Re-enable the account in case the contractor is rehired",
-      "Implement a technical control to prevent manual error",
+      "Leave the account enabled in case the contractor is rehired later in the year",
+      "Implement a technical control that prevents this particular kind of manual error recurring again",
     ],
     answerIndex: 1,
     explanation:
@@ -134,10 +134,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 5,
     prompt: "Which statement BEST reflects the principle of least privilege?",
     options: [
-      "Users should have the minimum permissions needed to perform their job, reviewed and removed when no longer needed",
-      "All users should have the same baseline permissions to simplify administration",
-      "Permissions should be granted based on seniority or tenure",
-      "Privileged access should never be granted; all actions should use standard user accounts",
+      "Users should hold the minimum permissions their job needs, reviewed and removed when no longer required",
+      "Every user should hold the same baseline permissions so that administration stays simple",
+      "Permissions should be granted according to seniority or length of service",
+      "Privileged access should never be granted at all, with every action performed from a standard user account",
     ],
     answerIndex: 0,
     explanation:
@@ -150,10 +150,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 5,
     prompt: "A security audit finds that production DBA credentials are stored in plaintext in a configuration file on the application server. The immediate compensating control is:",
     options: [
-      "Restrict file permissions on the configuration file to read-only",
+      "Restrict the file permissions on the configuration file to read-only for the service account and nobody else",
       "Implement a secrets management system (e.g., HashiCorp Vault) and migrate credentials out of config files",
-      "Rotate the DBA password every week",
-      "Use the same password for all environments to simplify management",
+      "Rotate the database administrator password once every week",
+      "Use the same password across all environments so that credential management stays simple",
     ],
     answerIndex: 1,
     explanation:
@@ -182,10 +182,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 6,
     prompt: "Which of the following is the MOST critical security activity in the software development lifecycle (SDLC)?",
     options: [
-      "Penetration testing in production",
+      "Penetration testing carried out against the production environment",
       "Security requirements analysis and threat modeling during design",
-      "Code obfuscation before release",
-      "Run-time monitoring in production",
+      "Code obfuscation applied shortly before release",
+      "Run-time monitoring once the application is in production",
     ],
     answerIndex: 1,
     explanation:
@@ -198,9 +198,9 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 6,
     prompt: "A developer proposes storing user passwords using SHA-256 hashing without salt. What is the BEST response?",
     options: [
-      "Approve — SHA-256 is a strong, FIPS-approved hash function",
-      "Reject; use a key-derivation function (KDF) like bcrypt or Argon2 with per-user salt to slow brute-force attacks",
-      "Approve but require a global salt to be appended to all passwords",
+      "Approve, since SHA-256 is a strong and FIPS-approved hash function",
+      "Reject; use a key-derivation function such as bcrypt or Argon2 with a per-user salt",
+      "Approve, but require a single global salt to be appended to every password",
       "Use AES encryption instead of hashing so passwords can be recovered if the user forgets",
     ],
     answerIndex: 1,
@@ -214,10 +214,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 6,
     prompt: "Which statement BEST describes the principle of secure-by-design?",
     options: [
-      "Add security features after the code is written but before deployment",
-      "Integrate security requirements, threat modeling, and secure coding practices from the earliest design phase",
-      "Security is the responsibility of the security team, not developers",
-      "Use a penetration test to validate security before release",
+      "Add the security features once the code is written but before it is deployed to any production environment",
+      "Integrate security requirements, threat modelling and secure coding from the earliest design phase",
+      "Treat security as the security team's responsibility rather than the developers'",
+      "Rely on a penetration test to validate the security of the build before release",
     ],
     answerIndex: 1,
     explanation:
@@ -230,10 +230,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 6,
     prompt: "A SAST tool flags a potential cross-site scripting (XSS) vulnerability in user-facing code. The developer says the field is only used internally, so it's not a risk. BEST response?",
     options: [
-      "Close the finding — internal use is low-risk",
-      "Require the developer to implement output encoding/escaping regardless; internal users can still be compromised",
-      "Recommend the developer add input validation as compensation",
-      "Defer until the next release cycle",
+      "Close the finding, since an internal-only application is low risk",
+      "Require output encoding regardless; internal users can still be compromised",
+      "Recommend the developer add input validation as a compensating measure instead",
+      "Defer the fix until the next scheduled release cycle",
     ],
     answerIndex: 1,
     explanation:
@@ -246,10 +246,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 6,
     prompt: "Which of the following BEST prevents insecure deserialization attacks?",
     options: [
-      "Use a robust error-handling mechanism to catch deserialization errors",
+      "Use a robust error-handling mechanism to catch any deserialisation errors that might be thrown at runtime",
       "Avoid deserializing untrusted data; if necessary, deserialize into safe types only and validate",
-      "Compress the serialized data with GZIP",
-      "Sign the serialized object with a cryptographic key",
+      "Compress the serialised data with GZIP before transmitting it",
+      "Sign the serialised object with a cryptographic key before sending it",
     ],
     answerIndex: 1,
     explanation:
@@ -262,10 +262,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 6,
     prompt: "What is the PRIMARY benefit of code review in the secure SDLC?",
     options: [
-      "It slows down development to allow more testing",
+      "It deliberately slows development down so that considerably more testing can be fitted in beforehand",
       "It catches security flaws and design issues early, before deployment; it also transfers knowledge",
-      "It is a substitute for automated testing",
-      "It prevents developers from making mistakes",
+      "It acts as a substitute for automated security testing",
+      "It prevents developers from making mistakes in the first place",
     ],
     answerIndex: 1,
     explanation:
@@ -278,10 +278,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 6,
     prompt: "A developer wants to log the user's password for debugging purposes. What is the BEST response?",
     options: [
-      "Allow it only in development environments",
-      "Require the use of a generic placeholder (e.g., 'PASSWORD_REDACTED') in all logs; never log sensitive data",
-      "Log the password hash instead",
-      "Only log the first 3 characters of the password",
+      "Allow it, but only within development environments",
+      "Require a generic placeholder such as 'PASSWORD_REDACTED'; never log sensitive data",
+      "Log the hash of the password instead of the value",
+      "Log only the first three characters of the password so that troubleshooting is still possible",
     ],
     answerIndex: 1,
     explanation:
@@ -294,10 +294,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 7,
     prompt: "In the NIST 800-61 incident response model, what is the primary goal of the Containment phase?",
     options: [
-      "Identify the root cause of the incident",
+      "Identify the root cause of the incident straight away",
       "Stop the attack, preserve evidence, and prevent further compromise",
-      "Restore systems to normal operation",
-      "Determine who was responsible for the incident",
+      "Restore the affected systems to normal operation",
+      "Determine which individual was responsible for causing the incident",
     ],
     answerIndex: 1,
     explanation:
@@ -310,10 +310,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 7,
     prompt: "An incident response playbook should include:",
     options: [
-      "Contact information for key personnel, decision trees for escalation, and documented procedures for each incident type",
-      "A list of all security tools and their capabilities",
-      "The organization's complete IT architecture",
-      "A guarantee that incidents will be resolved within a specific timeframe",
+      "Contact details for key personnel, escalation decision trees, and procedures for each incident type",
+      "A complete list of every security tool in use and its capabilities",
+      "A full description of the organisation's entire IT architecture",
+      "A guarantee that every incident will be resolved within a specific, contractually agreed timeframe every time",
     ],
     answerIndex: 0,
     explanation:
@@ -326,10 +326,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 7,
     prompt: "A security analyst discovers suspicious outbound traffic from a web server. The appropriate immediate action is:",
     options: [
-      "Shut down the server to stop the exfiltration",
-      "Network-isolate the server (block inbound/outbound) while preserving memory and logs for forensic analysis",
-      "Monitor the traffic to gather more evidence",
-      "Notify the police before taking any action",
+      "Shut the server down immediately so that the data exfiltration stops at once, whatever the cost",
+      "Network-isolate the server while preserving memory and logs for forensic analysis",
+      "Continue monitoring the traffic to gather further evidence",
+      "Notify law enforcement before taking any technical action at all",
     ],
     answerIndex: 1,
     explanation:
@@ -342,10 +342,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 7,
     prompt: "Which of the following is the BEST indicator that an incident requires external disclosure?",
     options: [
-      "The incident affected more than 100 users",
-      "The incident involved personal data whose loss creates a risk to individuals, per applicable privacy law",
-      "The incident was caused by an external attacker",
-      "The incident resulted in any system downtime",
+      "The incident affected more than one hundred separate users",
+      "The incident involved personal data whose loss creates a risk to individuals",
+      "The incident was caused by an external attacker rather than by an insider mistake",
+      "The incident resulted in any measurable downtime for a production system",
     ],
     answerIndex: 1,
     explanation:
@@ -358,10 +358,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 7,
     prompt: "After an incident is resolved, what is the BEST use of the post-incident review?",
     options: [
-      "Determine who to fire for allowing the incident",
-      "Collect facts, identify root cause, and document lessons learned to improve detection, prevention, and response in the future",
-      "Satisfy the auditor's requirement for incident documentation",
-      "Provide evidence for a lawsuit against the attacker",
+      "Determine which member of staff should be dismissed for allowing the incident to happen at all",
+      "Collect facts, identify root cause, and document lessons that improve detection and response",
+      "Satisfy the auditor's requirement that incidents be formally documented",
+      "Provide the evidence needed to bring a lawsuit against the attacker later",
     ],
     answerIndex: 1,
     explanation:
@@ -374,10 +374,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 7,
     prompt: "Which of the following is a key metric for measuring incident response maturity?",
     options: [
-      "The total number of incidents detected per month",
+      "The total number of incidents detected in each calendar month",
       "Mean time to detect (MTTD) and mean time to respond (MTTR); trends over time show improvement",
-      "The number of false positives generated by SIEM rules",
-      "The budget allocated to incident response",
+      "The number of false positives that the SIEM correlation rules generate over a typical week",
+      "The size of the budget allocated to the incident response function",
     ],
     answerIndex: 1,
     explanation:
@@ -390,10 +390,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 8,
     prompt: "Which of the following is a core principle of business continuity planning?",
     options: [
-      "Invest in the most advanced technology to ensure zero downtime",
+      "Invest in the most advanced technology available so that downtime is eliminated entirely from the outset",
       "Understand critical business functions and their dependencies; establish RTOs and RPOs based on impact",
-      "Develop a BCP that covers every possible scenario",
-      "Test the BCP annually to ensure it remains valid",
+      "Develop a continuity plan that covers every possible failure scenario",
+      "Test the continuity plan once a year to confirm it remains valid",
     ],
     answerIndex: 1,
     explanation:
@@ -408,8 +408,8 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     options: [
       "RTO is the maximum data loss; RPO is the maximum downtime",
       "RTO is the maximum downtime; RPO is the maximum acceptable data loss",
-      "They are the same metric, used interchangeably",
-      "RTO applies to IT systems; RPO applies to business processes",
+      "They are the same metric and the terms are used interchangeably",
+      "RTO applies only to IT systems, while RPO applies to business processes",
     ],
     answerIndex: 1,
     explanation:
@@ -422,10 +422,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 8,
     prompt: "An organization's BCP identifies that critical systems have a 4-hour RTO and 1-hour RPO. The DR plan documents a 24-hour recovery. What is the BEST next step?",
     options: [
-      "Accept the gap as acceptable risk",
-      "Escalate to executive leadership; either close the gap (investing in faster recovery) or formally accept the residual risk with accountability",
-      "Reduce the BIA to match the DR capability",
-      "Hire more staff to speed up recovery",
+      "Accept the gap on the basis that it is an acceptable risk",
+      "Escalate to executive leadership: either close the gap or formally accept the residual risk",
+      "Revise the business impact analysis downwards so that it matches the current recovery capability",
+      "Hire additional staff so that the recovery process runs faster",
     ],
     answerIndex: 1,
     explanation:
@@ -438,10 +438,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 8,
     prompt: "Which of the following is the BEST reason to conduct a tabletop exercise for BCP testing?",
     options: [
-      "To avoid disrupting production systems",
-      "To verify that the plan is realistic, identify gaps, and improve team coordination without the cost and risk of a full simulation",
-      "To satisfy external auditors",
-      "To measure how fast systems can be restored",
+      "To avoid causing any disruption at all to live production systems during the exercise window",
+      "To confirm the plan is realistic, find gaps, and improve coordination without a full simulation",
+      "To satisfy the requirements of external auditors",
+      "To measure precisely how quickly the systems can be restored",
     ],
     answerIndex: 1,
     explanation:
@@ -454,10 +454,10 @@ export const EXTRA_QUESTIONS_D5_D8: Question[] = [
     domainId: 8,
     prompt: "A BCP identifies that redundant internet connectivity is required to meet the RTO. However, the cost of a second circuit is 50% of annual IT budget. The BEST approach is:",
     options: [
-      "Approve the cost without further analysis",
-      "Reject the cost and accept the risk of extended downtime",
-      "Conduct a cost-benefit analysis comparing the cost of redundancy to the annual loss expected if connectivity is lost; make the case to leadership",
-      "Defer the decision until a breach occurs",
+      "Approve the expenditure immediately without carrying out any further analysis or a business case at all",
+      "Reject the expenditure and accept the risk of extended downtime instead",
+      "Run a cost-benefit analysis comparing redundancy cost against expected annual loss, then put it to leadership",
+      "Defer the decision until an actual outage forces the issue",
     ],
     answerIndex: 2,
     explanation:
