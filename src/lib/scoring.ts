@@ -62,6 +62,51 @@ export function shuffle<T>(arr: readonly T[], rng: () => number = Math.random): 
 }
 
 /**
+ * Deterministic RNG from a string seed (xmur3 hash into mulberry32).
+ *
+ * Needed because the option order has to survive a re-render. `Math.random()`
+ * would reshuffle the options every time the component painted — on submit, on
+ * the explanation expanding — which is unusable.
+ */
+export function seededRng(seed: string): () => number {
+  let h = 1779033703 ^ seed.length;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  let a = (h ^= h >>> 16) >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Display order for a question's options, as canonical indices.
+ *
+ * The bank stores the correct answer at option B in 196 of 246 questions, so
+ * always picking B scored 79.7% — past the 70% pass mark — without knowing any
+ * CISSP. The main quiz rendered `q.options` in stored order and never shuffled,
+ * unlike the vault quick test, which always has.
+ *
+ * Returns a permutation rather than reordered options on purpose. `pickedIndex`
+ * is persisted on every answer, the review page reads `q.options[pickedIndex]`
+ * from the canonical bank, and `isTechnicianAnswer` compares against the
+ * canonical `technicianTrap`. Shuffling the stored order would silently corrupt
+ * every historical answer and misfire the technician detector, so the shuffle
+ * stays in the view and the caller maps back before writing anything down.
+ */
+export function optionOrder(optionCount: number, seed: string): number[] {
+  return shuffle(
+    Array.from({ length: optionCount }, (_, i) => i),
+    seededRng(seed),
+  );
+}
+
+/**
  * Selects the question set for a run.
  *
  * `domainId` only filters in "domain" mode; mixed, full and misses deliberately

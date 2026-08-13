@@ -12,6 +12,7 @@ import {
   targetScorePct,
   cisoCounterPatch,
   describeMode,
+  optionOrder,
   MODE_LIMITS,
   MODE_SECONDS,
   type QuizMode,
@@ -114,13 +115,21 @@ export default function QuizSessionPage() {
       if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement) return;
       if (!submitted) {
         if (["1", "2", "3", "4"].includes(e.key)) {
-          setPicked(parseInt(e.key) - 1);
+          // The number keys address what's on screen, so map the slot back to
+          // the canonical index the rest of the flow expects. optionOrder is
+          // deterministic from its seed, so recomputing it here yields exactly
+          // the order being rendered — no shared ref needed.
+          const cur = questions[idx];
+          if (!cur) return;
+          const slot = parseInt(e.key) - 1;
+          const canonical = optionOrder(cur.options.length, `${attemptId}-${cur.id}`)[slot];
+          if (canonical !== undefined) setPicked(canonical);
         }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [submitted]);
+  }, [submitted, questions, idx, attemptId]);
 
   if (!profile) return null;
   // Loading is not emptiness — without this the misses queue flashes "nothing
@@ -143,6 +152,10 @@ export default function QuizSessionPage() {
 
   const q = questions[idx];
   const isLast = idx === questions.length - 1;
+
+  // Seeded on the attempt and the question, so the order is fixed for this
+  // question in this attempt and does not reshuffle on every re-render.
+  const optionSlots = optionOrder(q.options.length, `${attemptId}-${q.id}`);
 
   const submit = async () => {
     if (picked === null) return;
@@ -270,11 +283,16 @@ export default function QuizSessionPage() {
         <h1 className="text-lg leading-relaxed mb-5" id={`q-${q.id}`}>{q.prompt}</h1>
 
         <div role="radiogroup" aria-labelledby={`q-${q.id}`} className="space-y-2">
-          {q.options.map((opt, i) => {
+          {/* Iterating the permutation, not q.options: `i` is the canonical
+              index and `slot` is where it appears on screen. `picked` stays
+              canonical throughout, so submit() and everything downstream needs
+              no translation. */}
+          {optionSlots.map((i, slot) => {
+            const opt = q.options[i];
             const isCorrect = submitted && i === q.answerIndex;
             const isPicked = picked === i;
             const isWrong = submitted && isPicked && !isCorrect;
-            const letter = String.fromCharCode(65 + i);
+            const letter = String.fromCharCode(65 + slot);
             const describedBy = isCorrect ? `status-${i}` : isWrong ? `status-${i}` : undefined;
             return (
               <button
