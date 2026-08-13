@@ -7,10 +7,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 1,
     prompt: "Which type of risk acceptance is MOST appropriate for low-severity, residual risks after controls are implemented?",
     options: [
-      "Never accept any risk — implement additional controls",
-      "Implicit acceptance without documentation",
+      "Never accept any risk at all; always implement further compensating controls",
+      "Implicit acceptance by the business, with nothing written down anywhere",
       "Explicit, documented acceptance by an accountable executive owner with periodic review",
-      "Accept only if cost to mitigate exceeds the asset value",
+      "Accept only where the cost of mitigation exceeds the value of the asset in the first place",
     ],
     answerIndex: 2,
     explanation:
@@ -23,10 +23,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 1,
     prompt: "A supplier security breach affects the organization's supply chain. What is the PRIMARY security governance failure?",
     options: [
-      "The organization did not conduct background checks on supplier employees",
+      "The organisation did not run background checks on the supplier's own employees",
       "Third-party risk management and due diligence controls were insufficient before the breach occurred",
-      "The organization did not have insurance to cover the supplier breach",
-      "The breach was unforeseeable and thus unpreventable",
+      "The organisation had no insurance in place to cover a breach at the supplier",
+      "The breach was genuinely unforeseeable and therefore could not have been prevented by anyone involved at all",
     ],
     answerIndex: 1,
     explanation:
@@ -39,10 +39,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 2,
     prompt: "Which of the following BEST reflects data ownership in a cloud environment?",
     options: [
-      "The cloud provider owns all data stored in their infrastructure",
-      "The organization retains data ownership; the cloud provider is the custodian and must follow data-handling instructions",
-      "Data ownership is shared equally between the organization and the cloud provider",
-      "Ownership is determined by who pays for the storage",
+      "The cloud provider owns all of the data stored within their infrastructure",
+      "The organisation retains ownership; the provider is custodian and follows its instructions",
+      "Data ownership is shared equally between the organisation and the cloud provider under the service agreement",
+      "Ownership is determined by whichever party pays for the storage",
     ],
     answerIndex: 1,
     explanation:
@@ -55,10 +55,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 2,
     prompt: "An organization has classified customer contact information as 'Public' but the CEO wants to keep it confidential from competitors. What is the BEST approach?",
     options: [
-      "Reclassify it as 'Confidential' to enforce stronger controls",
+      "Reclassify the data as 'Confidential' so that stronger controls are enforced",
       "Keep the public classification but add business need-based access restrictions; document the policy exception",
-      "Assume the public classification is correct and do not add controls",
-      "Encrypt the data to compensate for the low classification",
+      "Assume the existing public classification is correct and add no further controls of any kind whatsoever at this stage",
+      "Encrypt the data to compensate for the low classification level",
     ],
     answerIndex: 1,
     explanation:
@@ -71,10 +71,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 3,
     prompt: "A startup uses OpenSSL version 3 years old. What is the PRIMARY risk?",
     options: [
-      "The startup will be non-compliant with PCI-DSS",
-      "Known vulnerabilities in the old version could be exploited; the startup should update to the latest stable version",
-      "Old OpenSSL is slower and will impact performance",
-      "The licensing terms of old OpenSSL are outdated",
+      "The startup will end up non-compliant with the PCI-DSS requirements",
+      "Known vulnerabilities in the old version could be exploited; update to the latest stable release",
+      "The older OpenSSL build is slower and will noticeably impact application performance under load",
+      "The licensing terms attached to the old OpenSSL release are outdated",
     ],
     answerIndex: 1,
     explanation:
@@ -87,10 +87,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 3,
     prompt: "In a key rotation strategy, which of the following BEST ensures data encrypted with old keys remains accessible?",
     options: [
-      "Keep the old keys indefinitely in case they are needed",
-      "Destroy old keys immediately after rotation to prevent misuse",
-      "Maintain old keys in a secure archive and establish a re-encryption process for data encrypted under old keys",
-      "Use the same key for all encryption to avoid rotation entirely",
+      "Keep all of the old keys indefinitely, in case they turn out to be needed",
+      "Destroy the old keys immediately after rotation so that they cannot be misused later",
+      "Archive old keys securely and set up a re-encryption process for data under them",
+      "Use a single key for all encryption so that rotation is avoided entirely",
     ],
     answerIndex: 2,
     explanation:
@@ -119,10 +119,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 4,
     prompt: "A user receives a phishing email claiming to be from IT requesting password reset. What is the MOST secure user response?",
     options: [
-      "Click the link to 'reset' immediately",
-      "Reply to the email asking for verification",
-      "Do not click links; navigate directly to the IT website or call IT directly to verify the request",
-      "Delete the email",
+      "Click the link and complete the 'reset' immediately",
+      "Reply to the email itself asking the sender for verification",
+      "Do not click links; go to the IT site directly or phone IT to verify the request",
+      "Delete the email without reporting it to anyone and take no other action afterwards",
     ],
     answerIndex: 2,
     explanation:
@@ -135,10 +135,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 5,
     prompt: "Which IAM scenario BEST demonstrates the principle of least privilege in action?",
     options: [
-      "A user has access to all systems in their department to 'stay flexible'",
-      "An accountant can view general ledger but cannot approve payments; a payment approver can approve but cannot modify journal entries",
-      "All users have the same baseline access regardless of role",
-      "Access is granted for the entire fiscal year without review",
+      "A user is given access to every system in their department so as to stay flexible",
+      "An accountant can view the ledger but not approve payments; an approver cannot alter entries",
+      "All users are given the same baseline access regardless of what their actual role is within the team",
+      "Access is granted for a whole fiscal year at a time without any review",
     ],
     answerIndex: 1,
     explanation:
@@ -151,10 +151,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 5,
     prompt: "A contractor's access should remain active for 3 months beyond their contract end date to 'provide documentation support.' What is the BEST response?",
     options: [
-      "Grant the extended access to maintain continuity",
-      "Revoke access on the contract end date; if documentation support is needed, issue temporary re-provisioning with explicit approval and monitoring",
-      "Grant access until the end of the fiscal year as a courtesy",
-      "Keep the account active indefinitely in case the contractor returns",
+      "Grant the extended access in order to maintain continuity of work",
+      "Revoke on the contract end date; re-provision temporarily with explicit approval if needed",
+      "Grant access until the end of the fiscal year purely as a courtesy",
+      "Keep the account active indefinitely in case the contractor returns to the project later on",
     ],
     answerIndex: 1,
     explanation:
@@ -167,10 +167,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 6,
     prompt: "Which of the following BEST represents secure-by-default architecture?",
     options: [
-      "A system is deployed with all features enabled and relies on users to disable risky features",
+      "A system is deployed with every feature enabled and relies on users to switch off any of the risky ones themselves",
       "A system is deployed with minimal functionality enabled; users must explicitly enable features they need",
-      "A system is secure if it passes a final penetration test before release",
-      "Security is added in patches after customer reports vulnerabilities",
+      "A system counts as secure if it passes a final penetration test before release",
+      "Security is added in patches once customers report the vulnerabilities",
     ],
     answerIndex: 1,
     explanation:
@@ -183,10 +183,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 6,
     prompt: "A developer implements a feature to 'remember me' by storing a session token in a long-lived browser cookie. What is the BEST security improvement?",
     options: [
-      "Encrypt the token",
-      "Use a short-lived token with refresh; bind the token to device characteristics; ensure HTTPOnly and Secure flags",
-      "Use a static token that never expires",
-      "Store the user ID in the cookie instead of a token",
+      "Encrypt the token before storing it",
+      "Use short-lived tokens with refresh, bind to device, and set HTTPOnly and Secure flags",
+      "Use a static token that never expires at all",
+      "Store the user's identifier in the cookie in place of an opaque session token entirely",
     ],
     answerIndex: 1,
     explanation:
@@ -199,10 +199,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 7,
     prompt: "An organization's incident response plan has not been tested in 3 years. What is the BEST governance decision?",
     options: [
-      "Skip testing this year due to budget constraints; resume next year",
+      "Skip the testing this year because of budget constraints and resume next year",
       "Schedule an immediate tabletop exercise; a stale plan + untrained team will fail during a real incident",
-      "Only test critical scenarios to save time",
-      "Hire an external consultant to test in your place",
+      "Only test the most critical scenarios in order to save time",
+      "Hire an external consultant to run the whole test on your behalf instead of doing it internally each year",
     ],
     answerIndex: 1,
     explanation:
@@ -215,10 +215,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 7,
     prompt: "During incident response, evidence must be handled to preserve its admissibility in legal proceedings. Which principle is MOST critical?",
     options: [
-      "Collect as much data as possible",
+      "Collect as much data as is physically possible",
       "Maintain a clear chain of custody; document who accessed evidence, when, and for what purpose",
-      "Seal evidence in a locked room until trial",
-      "Photograph evidence before preservation",
+      "Seal the evidence in a locked room until the trial begins",
+      "Photograph all of the evidence before it is preserved and stored away securely somewhere off site",
     ],
     answerIndex: 1,
     explanation:
@@ -231,10 +231,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 8,
     prompt: "An organization's BCP identifies a 2-hour RTO for a mission-critical system, but the backup site is 500 miles away. What is the PRIMARY constraint?",
     options: [
-      "Distance itself is the problem; move the backup site closer",
-      "Network latency and failover coordination time may prevent meeting a 2-hour RTO with a remote site; evaluate split-site or multi-region active-active",
-      "Insurance will not cover a remote backup site",
-      "The RTO is impossible to achieve with any technology",
+      "The distance itself is the problem, so move the backup site closer",
+      "Latency and failover coordination may prevent a 2-hour RTO from a remote site; consider multi-region",
+      "The insurance policy will not cover a remote backup site at all",
+      "A two-hour RTO is impossible to achieve with any technology currently available at any price on the market",
     ],
     answerIndex: 1,
     explanation:
@@ -247,10 +247,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 8,
     prompt: "During a BCP test, the backup generator fails to start. This reveals:",
     options: [
-      "The BCP is worthless and should be abandoned",
-      "A critical failure in a key recovery resource; the generator must be repaired or replaced, and the test should be re-run after remediation",
-      "The test was poorly designed",
-      "No action is needed if the primary power is stable",
+      "The continuity plan is worthless and should be abandoned entirely",
+      "A critical failure in a key recovery resource; repair or replace it and re-run the test",
+      "The test itself was poorly designed from the start",
+      "No action is needed at all provided the primary power supply remains stable throughout",
     ],
     answerIndex: 1,
     explanation:
@@ -263,10 +263,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 1,
     prompt: "A risk assessment identifies that an organization lacks formal security policies. How should this finding be prioritized?",
     options: [
-      "Low priority — policies are just documentation and do not prevent breaches",
-      "Critical priority — policies are the foundation of governance; without them, no one is accountable and controls are ad-hoc",
-      "Medium priority — focus on technical controls first",
-      "Defer until a breach occurs",
+      "Low priority, since policies are only documentation and do not actually prevent any breaches",
+      "Critical — policies are the foundation of governance; without them nothing is accountable",
+      "Medium priority; concentrate on the technical controls first instead",
+      "Defer the whole thing until a breach actually occurs",
     ],
     answerIndex: 1,
     explanation:
@@ -279,10 +279,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 2,
     prompt: "An organization stores backups offline in a vault. The BEST reason for this practice is:",
     options: [
-      "To save money on storage hardware",
+      "To save money on the storage hardware required",
       "To protect backups from ransomware that might encrypt online systems",
-      "To comply with archival laws",
-      "To improve backup performance",
+      "To comply with the relevant archival laws",
+      "To improve the performance of the backup and restore process overall",
     ],
     answerIndex: 1,
     explanation:
@@ -295,10 +295,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 3,
     prompt: "Which cryptographic algorithm is MOST vulnerable to quantum computing attacks?",
     options: [
-      "AES-256",
-      "SHA-256",
-      "RSA and elliptic curve cryptography (ECC) — quantum computers can factor large numbers and compute discrete logs",
-      "Passwords",
+      "AES-256 used in Galois/Counter Mode for bulk encryption of data at rest and in transit",
+      "SHA-256 used for integrity checking",
+      "RSA and elliptic curve cryptography, which rely on factoring and discrete logs",
+      "Passwords protected with bcrypt",
     ],
     answerIndex: 2,
     explanation:
@@ -311,10 +311,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 4,
     prompt: "Which of the following is the BEST practice for handling sensitive email?",
     options: [
-      "Send sensitive data only to trusted recipients",
-      "Use email encryption/TLS for all sensitive emails; consider brief messages + secure portals for large data",
-      "Require the recipient to reply confirming receipt",
-      "Mark emails as 'Confidential' but do not encrypt",
+      "Send the sensitive data only to recipients you already trust",
+      "Use TLS or email encryption for sensitive mail; use secure portals for large data",
+      "Require the recipient to reply confirming that they received it",
+      "Mark the emails as 'Confidential' in the subject but do not actually encrypt them",
     ],
     answerIndex: 1,
     explanation:
@@ -327,10 +327,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 5,
     prompt: "An organization implements a new identity provider (IdP) but fails to de-commission the old one. What is the PRIMARY security risk?",
     options: [
-      "Users will be confused about which IdP to use",
+      "Users will be confused about which identity provider they should use",
       "Orphaned accounts in the old system may persist indefinitely; attackers could reactivate them",
-      "The new IdP will be slower due to competition for resources",
-      "Licensing costs will double",
+      "The new identity provider will run slower because of contention for shared resources and compute capacity",
+      "The licensing costs involved will double",
     ],
     answerIndex: 1,
     explanation:
@@ -359,9 +359,9 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 7,
     prompt: "An organization discovers that a terminated employee's VPN account was never disabled. What is the appropriate priority and response?",
     options: [
-      "Low priority; the employee is no longer a threat",
-      "Critical; immediately revoke the account and investigate access logs; check if former employee accessed systems post-termination",
-      "Medium priority; disable the account at the end of the month",
+      "Low priority, since the employee is no longer a threat",
+      "Critical; revoke the account now and check the logs for post-termination access",
+      "Medium priority; disable the account at the end of the current month",
       "High priority; assume the account was used maliciously and require a full audit",
     ],
     answerIndex: 1,
@@ -375,10 +375,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 8,
     prompt: "What is the BEST practice for storing and accessing critical BCP/DRP documentation?",
     options: [
-      "Store in cloud storage with standard access control",
-      "Store both electronic and hardcopy versions in secure, geographically separated locations; ensure 24/7 accessible summaries",
-      "Store only electronically to save space",
-      "Distribute to all employees so they can access it anytime",
+      "Store it in cloud storage protected by standard access controls",
+      "Store electronic and hardcopy versions in separate secure locations, with summaries always reachable",
+      "Store it only electronically in order to save physical space",
+      "Distribute it to all employees so that they can access it at any time of day or night from any device",
     ],
     answerIndex: 1,
     explanation:
@@ -391,10 +391,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 1,
     prompt: "An organization's risk register shows that risks are tracked but no risk owner is assigned. What is the consequence?",
     options: [
-      "Risks will be managed by the entire company collectively",
+      "The risks will be managed by the entire company collectively",
       "No one is accountable; risks are unlikely to be mitigated; escalation and prioritization will fail",
-      "The organization will appear proactive to auditors even without actual mitigation",
-      "Risk owners can be assigned later, after the risks are identified",
+      "The organisation will appear proactive to auditors even without any actual mitigation taking place",
+      "Risk owners can always be assigned later, once the risks have been identified",
     ],
     answerIndex: 1,
     explanation:
@@ -407,10 +407,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 2,
     prompt: "Which of the following is an example of a valid reason to NOT encrypt data?",
     options: [
-      "Encryption slows down searches",
-      "Users might forget encryption keys",
-      "The data is low-sensitivity and low-impact if disclosed; cost of encryption + key management exceeds the risk",
-      "The organization does not have budget for encryption tools",
+      "Encryption noticeably slows down search queries",
+      "Users might forget the encryption keys they were given",
+      "The data is low sensitivity and low impact; encryption and key management cost more",
+      "The organisation does not have any budget for the necessary encryption tooling and key management",
     ],
     answerIndex: 2,
     explanation:
@@ -423,10 +423,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 3,
     prompt: "An application uses a predictable random number generator (RNG) for generating session tokens. What is the PRIMARY risk?",
     options: [
-      "Performance will be slow",
-      "Tokens will be short and easy to remember",
+      "Performance of the system will be slow",
+      "Tokens will be short and therefore easy to remember",
       "An attacker can predict future tokens and forge sessions",
-      "Session tokens will not be portable between systems",
+      "Session tokens will not be portable between different systems",
     ],
     answerIndex: 2,
     explanation:
@@ -439,10 +439,10 @@ export const EXTRA_QUESTIONS_3: Question[] = [
     domainId: 4,
     prompt: "An organization implements email archival to comply with retention requirements. The PRIMARY security control needed alongside archival is:",
     options: [
-      "Encryption of archived data to protect it from disclosure",
-      "Restricting who can access the archive based on data classification and role",
+      "Encryption of the archived data to protect it from disclosure",
+      "Restricting who may access the archive based on data classification and job role",
       "Both encryption and access control, plus periodic testing of recovery procedures",
-      "Regular deletion of old archives to prevent storage bloat",
+      "Regular deletion of the oldest archives to prevent storage bloat",
     ],
     answerIndex: 2,
     explanation:
