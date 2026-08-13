@@ -7,10 +7,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 1,
     prompt: "Which governance body is MOST responsible for setting the organization's risk appetite?",
     options: [
-      "The Chief Risk Officer (CRO) unilaterally",
+      "The Chief Risk Officer, acting unilaterally on behalf of the firm",
       "The board of directors with input from executive leadership",
-      "The compliance team based on regulatory requirements",
-      "Shareholders at the annual meeting",
+      "The compliance team, based purely on regulatory requirements",
+      "Shareholders voting at the annual general meeting",
     ],
     answerIndex: 1,
     explanation:
@@ -23,10 +23,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 1,
     prompt: "In a privacy impact assessment (PIA), the PRIMARY goal is to:",
     options: [
-      "Ensure compliance with data-protection laws",
+      "Ensure the organisation stays compliant with data-protection law",
       "Identify privacy risks in a data-processing activity and determine mitigations before deployment",
-      "Audit systems after they are in production",
-      "Create documentation for regulators",
+      "Audit the systems once they are already running in production",
+      "Create the documentation that regulators will eventually ask to see during a formal inspection process",
     ],
     answerIndex: 1,
     explanation:
@@ -40,9 +40,9 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     prompt: "A data owner wants to limit access to sensitive data to 'only those who absolutely need it.' The BEST way to operationalize this is:",
     options: [
       "Define business roles that require the data and assign access accordingly; review quarterly",
-      "Let each department manager decide who gets access",
-      "Require explicit approval from the data owner for every access request",
-      "Grant access to all employees by default and remove exceptions",
+      "Let each department manager decide who should be given access",
+      "Require explicit approval from the data owner for every single access request that is made to them",
+      "Grant access to all employees by default and remove the exceptions later",
     ],
     answerIndex: 0,
     explanation:
@@ -55,10 +55,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 2,
     prompt: "Which of the following is a compensating control for the absence of full-disk encryption on a cloud-hosted virtual machine?",
     options: [
-      "Using a strong password for the root/admin account",
-      "Enabling VM-level snapshots for backup and recovery",
+      "Using a strong password on the root and administrator accounts",
+      "Enabling VM-level snapshots so that backup and recovery are fully covered at all times automatically",
       "Restricting network access to the VM via firewalls and allowing access only from trusted IPs",
-      "Running antivirus software on the VM",
+      "Running endpoint antivirus software on the virtual machine itself",
     ],
     answerIndex: 2,
     explanation:
@@ -81,7 +81,7 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     id: "ex2-d3-02",
     domainId: 3,
     prompt: "Which characteristic of a hash function is necessary to prevent rainbow table attacks?",
-    options: ["Determinism", "Salt (per-user randomness)", "Speed", "Collusion resistance"],
+    options: ["Determinism across runs", "Salt (per-user randomness)", "Speed of computation", "Collusion resistance between users"],
     answerIndex: 1,
     explanation:
       "Salt makes each hash unique even if two users share the same password, preventing lookup attacks. Determinism, speed, and collusion are unrelated to rainbow tables.",
@@ -93,10 +93,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 4,
     prompt: "Which of the following BEST prevents email spoofing?",
     options: [
-      "Requiring TLS encryption for all outbound email",
+      "Requiring TLS encryption on every piece of outbound email traffic",
       "Implementing SPF, DKIM, and DMARC authentication frameworks",
-      "Using complex email passwords",
-      "Storing emails encrypted at rest",
+      "Using complex passwords on every email account",
+      "Storing all messages encrypted at rest on the server",
     ],
     answerIndex: 1,
     explanation:
@@ -109,10 +109,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 4,
     prompt: "An organization discovers that confidential meeting notes were accidentally sent to a distribution list instead of an individual. What is the FIRST action?",
     options: [
-      "Ask recipients to delete the email and send a follow-up apology",
-      "Immediately notify the information owner and privacy/legal; document the incident; assess notification obligations; implement controls to prevent recurrence",
-      "Review email logs to see who opened the email",
-      "No action — it was an accident and was quickly corrected",
+      "Ask all the recipients to delete the email and send a follow-up apology note to each of them personally",
+      "Notify the information owner and privacy/legal, document it, and assess notification obligations",
+      "Review the email logs to establish who actually opened the message",
+      "Take no action, since it was an accident and was corrected quickly",
     ],
     answerIndex: 1,
     explanation:
@@ -125,10 +125,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 5,
     prompt: "An access review process finds that a user in the Finance department has direct database access intended only for the DBA team. The user says they received it years ago and don't remember why. BEST action?",
     options: [
-      "Revoke access immediately without further investigation",
+      "Revoke the access immediately without any further investigation",
       "Ask the user to document the business justification; if none exists, revoke and close the finding",
-      "Leave the access in place since the user has been trusted for years",
-      "Require the user to take a security training course before deciding",
+      "Leave the access in place, since the user has been trusted for many years",
+      "Require the user to complete a security awareness course before any decision is made about the access",
     ],
     answerIndex: 1,
     explanation:
@@ -141,10 +141,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 5,
     prompt: "Which identity and access management (IAM) control is MOST critical for cloud environments with high staff turnover?",
     options: [
-      "Implementing multi-factor authentication (MFA)",
+      "Implementing multi-factor authentication across every account in the whole organisation without exception",
       "Automating joiner-mover-leaver (JML) processes to quickly provision and deprovision access",
-      "Using strong password policies",
-      "Requiring background checks",
+      "Using strong password complexity policies throughout",
+      "Requiring background checks on every new starter",
     ],
     answerIndex: 1,
     explanation:
@@ -157,10 +157,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 6,
     prompt: "Which type of testing is MOST effective at discovering OWASP Top 10 vulnerabilities in a web application?",
     options: [
-      "Unit testing by the development team",
-      "Static Application Security Testing (SAST) and Dynamic Application Security Testing (DAST) combined with manual penetration testing",
-      "Manual code review only",
-      "Network-level firewalling and WAF rules",
+      "Unit testing carried out by the development team themselves before each merge to main to the trunk",
+      "Static and dynamic application security testing, combined with manual penetration testing",
+      "Manual code review on its own, with no tooling",
+      "Network-level firewalling backed by WAF rule tuning",
     ],
     answerIndex: 1,
     explanation:
@@ -173,10 +173,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 6,
     prompt: "A developer asks whether it is safe to store API credentials in a .env file committed to the source code repository. The appropriate response is:",
     options: [
-      "Yes, as long as the repository is private",
+      "Yes, provided that the repository itself is kept private",
       "No; use a secrets management system and ensure .env is in .gitignore",
-      "Yes, if the credentials are hashed",
-      "Yes, as long as the repository has branch protection enabled",
+      "Yes, provided the credentials are hashed beforehand",
+      "Yes, as long as the repository has branch protection rules fully enabled",
     ],
     answerIndex: 1,
     explanation:
@@ -189,10 +189,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 6,
     prompt: "An API endpoint requires a user ID and does not validate that the requesting user owns the resource being accessed. This is an example of:",
     options: [
-      "Broken authentication",
+      "Broken authentication on the endpoint",
       "Broken access control (IDOR — Insecure Direct Object Reference)",
-      "Insufficient logging",
-      "Weak cryptography",
+      "Insufficient logging and monitoring across the whole application stack",
+      "Weak cryptography protecting the identifier",
     ],
     answerIndex: 1,
     explanation:
@@ -205,10 +205,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 7,
     prompt: "An organization has not conducted an incident response drill in 2 years. What is the PRIMARY risk?",
     options: [
-      "The organization will miss the annual budget cycle",
-      "Key personnel may no longer be available; procedures may be outdated; team coordination will be untested during a real incident",
-      "Incidents will be more frequent",
-      "The organization will fail compliance audits",
+      "The organisation will miss the annual budget planning cycle entirely as a result of the delay",
+      "Key personnel may have left, procedures may be stale, and coordination will be untested",
+      "Incidents will simply become more frequent over time",
+      "The organisation will fail its next round of compliance audits",
     ],
     answerIndex: 1,
     explanation:
@@ -221,10 +221,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 7,
     prompt: "During an incident, the IR lead decides to preserve the compromised system for forensic analysis before any remediation. This decision:",
     options: [
-      "Is always correct — forensics are paramount",
-      "Must balance forensic value against business impact (downtime, continued risk); if downtime cost exceeds forensic benefit, remediate and collect logs instead",
-      "Should be made by the forensics team alone",
-      "Should never be made; remediation always takes priority",
+      "Is always the right call, since forensic value is paramount",
+      "Must balance forensic value against downtime and ongoing risk; sometimes remediate and keep logs",
+      "Should be made by the forensics team on their own authority",
+      "Should never be made at all, since remediation always takes priority over evidence collection in every case",
     ],
     answerIndex: 1,
     explanation:
@@ -236,7 +236,7 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     id: "ex2-d7-03",
     domainId: 7,
     prompt: "An incident is detected at 10 AM. Forensic analysis begins and completes at 8 PM. The organization's MTTD is which of the following?",
-    options: ["10 hours", "8 hours", "0 hours (instant detection)", "Unable to determine without knowing when the incident actually occurred"],
+    options: ["Ten hours, measured from the first indicator appearing in the logs for that host", "Eight hours from the first alert", "Zero hours, since detection was instant", "Unable to determine without knowing when the incident actually occurred"],
     answerIndex: 3,
     explanation:
       "MTTD is from incident start to detection. If the incident began at 8 AM and was detected at 10 AM, MTTD = 2 hours. We don't know the actual start time from the information given.",
@@ -248,10 +248,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 8,
     prompt: "A Business Impact Analysis (BIA) should include:",
     options: [
-      "A list of all IT systems and their specifications",
-      "Identification of critical business processes, their dependencies, maximum tolerable downtime, and data-recovery objectives",
-      "A comprehensive security assessment of all assets",
-      "An inventory of all employee roles and responsibilities",
+      "A list of every IT system in use along with its full technical specifications and owners and support contacts",
+      "Critical business processes, their dependencies, maximum tolerable downtime and recovery objectives",
+      "A comprehensive security assessment covering all of the assets",
+      "An inventory of every employee role and its responsibilities",
     ],
     answerIndex: 1,
     explanation:
@@ -264,10 +264,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 8,
     prompt: "An organization's RTO for a critical application is 4 hours, but the actual recovery has taken 8–12 hours in recent tests. What is the appropriate governance action?",
     options: [
-      "Extend the RTO to 12 hours to match current capability",
+      "Extend the documented RTO to twelve hours so it matches the current actual recovery capability today",
       "Escalate the gap to leadership; fund recovery improvements OR formally accept the residual risk",
-      "Conduct more frequent drills until recovery improves",
-      "Blame the IT team for being slow",
+      "Conduct more frequent recovery drills until the times improve",
+      "Hold the IT team responsible for the slow recovery times",
     ],
     answerIndex: 1,
     explanation:
@@ -280,10 +280,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 1,
     prompt: "Which of the following BEST demonstrates proactive risk management?",
     options: [
-      "Responding quickly to breaches when they occur",
+      "Responding as quickly as possible to breaches at the point they actually occur in production environments",
       "Identifying threats and vulnerabilities early, implementing controls, and monitoring for residual risk",
-      "Following compliance checklists",
-      "Hiring more security staff",
+      "Working through the relevant compliance checklists",
+      "Hiring additional security staff into the team",
     ],
     answerIndex: 1,
     explanation:
@@ -296,10 +296,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 2,
     prompt: "An organization discovers that an external vendor accidentally retained a backup copy of customer data 18 months after the contract ended. The appropriate response is:",
     options: [
-      "No action — the data was not breached",
-      "Escalate to Legal and Privacy; assess breach notification obligations; update vendor contracts to include data-destruction clauses with verification",
-      "Ask the vendor to delete the data immediately and move on",
-      "Conduct a forensic analysis of the backup",
+      "Take no action, since the data itself was never breached",
+      "Escalate to Legal and Privacy, assess notification duties, and add destruction clauses to contracts",
+      "Ask the vendor to delete the data immediately and then consider the matter closed entirely and settled",
+      "Conduct a full forensic analysis of the vendor's backup",
     ],
     answerIndex: 1,
     explanation:
@@ -312,10 +312,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 3,
     prompt: "A company uses TLS 1.2 for all HTTPS traffic. Which statement BEST describes the security posture?",
     options: [
-      "This is the latest TLS version; encryption is bulletproof",
-      "TLS 1.2 is strong, but TLS 1.3 offers better security; plan to upgrade when feasible, while ensuring backward compatibility",
-      "TLS 1.2 is outdated; the company must upgrade immediately",
-      "TLS version is irrelevant; cipher strength is what matters",
+      "This is the latest TLS version, so the encryption is bulletproof",
+      "TLS 1.2 is strong, but plan an upgrade to 1.3 when feasible, keeping backward compatibility",
+      "TLS 1.2 is outdated, so the company must upgrade to 1.3 immediately",
+      "The TLS version is irrelevant here; only the cipher strength matters in practice at all in the end",
     ],
     answerIndex: 1,
     explanation:
@@ -328,10 +328,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 4,
     prompt: "Which of the following is a valid data-loss prevention (DLP) control for preventing sensitive data exfiltration via email?",
     options: [
-      "Blocking all email attachments",
+      "Blocking every attachment on outbound email regardless of type or who the recipient is or who the sender is",
       "Scanning outbound emails for sensitive data patterns and blocking or quarantining high-risk messages",
-      "Requiring passwords on all email accounts",
-      "Using email encryption for all messages",
+      "Requiring strong passwords on all of the email accounts",
+      "Using email encryption on every outgoing message",
     ],
     answerIndex: 1,
     explanation:
@@ -344,10 +344,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 5,
     prompt: "An internal audit identifies that privileged accounts (e.g., database admin) are shared among multiple IT staff. What is the BEST remediation?",
     options: [
-      "Rotate the shared password more frequently",
-      "Implement individual accounts with privileged access management (PAM), audit logging, and just-in-time (JIT) elevation",
-      "Require staff to get approval before using the shared account",
-      "Implement multi-factor authentication on the shared account",
+      "Rotate the shared password rather more frequently than now",
+      "Individual accounts with privileged access management, audit logging and just-in-time elevation",
+      "Require staff to obtain approval before using the shared account",
+      "Implement multi-factor authentication on top of the existing shared credentials instead of individual accounts",
     ],
     answerIndex: 1,
     explanation:
@@ -360,10 +360,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 6,
     prompt: "A security assessment finds that developers commit code directly to the main branch without code review. The PRIMARY security risk is:",
     options: [
-      "Slow deployment cycles",
+      "Slower deployment cycles overall",
       "Unreviewed code increases the likelihood of security flaws and malicious code reaching production",
-      "Loss of historical records",
-      "Difficulty rolling back changes",
+      "Loss of the historical change record",
+      "Difficulty rolling back changes once they have been deployed to production environments by the release team",
     ],
     answerIndex: 1,
     explanation:
@@ -376,10 +376,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 7,
     prompt: "An organization discovers a data breach from 6 months ago that was not previously detected. What is the FIRST priority?",
     options: [
-      "Fire the team that missed the breach",
-      "Contain the current state, assess scope, notify affected parties per law, and immediately implement detection improvements",
-      "Conduct a forensic analysis",
-      "Issue a public statement taking responsibility",
+      "Dismiss the team that failed to spot the breach",
+      "Contain the current state, assess scope, notify per law, and improve detection immediately",
+      "Conduct a full forensic analysis of it",
+      "Issue a public statement accepting full responsibility for what has happened here to the press",
     ],
     answerIndex: 1,
     explanation:
@@ -392,10 +392,10 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 8,
     prompt: "During a disaster recovery test, a critical system fails to recover within the RTO. Which governance body should be notified FIRST?",
     options: [
-      "The IT vendor",
-      "The recovery team to fix the procedures",
+      "The IT vendor who supplied it",
+      "The recovery team, who should be the ones to fix the procedures themselves",
       "Executive leadership and the business owner; they own the risk decision",
-      "The external auditors",
+      "The external auditors reviewing it",
     ],
     answerIndex: 2,
     explanation:

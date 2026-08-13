@@ -11,10 +11,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: Your CEO forwards you a vendor proposal for a new SaaS CRM that will store customer PII across multiple jurisdictions. Marketing wants to sign the contract this week. Legal has not reviewed it. The vendor's SOC 2 report is from three years ago. What is your FIRST action as the security leader?",
     options: [
-      "Approve the contract pending a penetration test after deployment",
+      "Approve the contract now, on condition that a penetration test follows shortly after deployment",
       "Require an updated SOC 2 Type II and a data-processing agreement before any signature",
-      "Deploy the CRM in a sandbox and assess technical controls",
-      "Escalate to the CIO and let them decide without further input",
+      "Deploy the CRM into a sandbox first and assess its technical controls there",
+      "Escalate to the CIO and let them decide without any further assessment input",
     ],
     answerIndex: 1,
     explanation:
@@ -29,10 +29,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: At 2 AM an on-call engineer sees anomalous outbound traffic from a production database server to an IP in a country your company doesn't operate in. The engineer immediately shuts down the server to stop the bleeding. You are paged at 2:15 AM. What should have been done FIRST?",
     options: [
-      "Shut down the server — stopping exfiltration is always the priority",
+      "Shut the server down at once, since stopping the exfiltration is always the first priority in a live incident",
       "Contain the host via network isolation while preserving volatile evidence and notifying the IR lead",
-      "Restart the server with packet capture enabled to gather evidence",
-      "Notify law enforcement before any containment decision",
+      "Restart the server with packet capture enabled so that more evidence is gathered",
+      "Notify law enforcement before making any containment decision at all",
     ],
     answerIndex: 1,
     explanation:
@@ -47,10 +47,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: Your company is acquiring a smaller competitor. During due diligence you discover the target stores unencrypted copies of 2 million customer credit cards in a legacy database that predates PCI-DSS adoption. The deal closes in 10 days. Which action BEST balances risk and business need?",
     options: [
-      "Encrypt the database immediately using your standard TDE configuration",
-      "Document the finding, quantify remediation cost, and factor it into the acquisition price and a binding remediation plan",
-      "Halt the acquisition until the target is fully PCI-DSS compliant",
-      "Accept the risk temporarily and plan remediation post-close",
+      "Encrypt the target's database immediately using your own standard TDE configuration and move on",
+      "Document the finding, quantify remediation cost, and reflect it in the price and a binding plan",
+      "Halt the acquisition entirely until the target is fully PCI-DSS compliant",
+      "Accept the risk temporarily and plan the remediation work for after close",
     ],
     answerIndex: 1,
     explanation:
@@ -66,9 +66,9 @@ export const SCENARIO_QUESTIONS: Question[] = [
       "SCENARIO: A developer proposes authenticating users to a new mobile app using a hard-coded AES-256 key embedded in the binary, plus a per-session random IV. They argue AES-256 is unbreakable. What is the BEST response?",
     options: [
       "Approve — AES-256 is indeed FIPS 140-validated and uncrackable by brute force",
-      "Reject — a static symmetric key in a distributed binary makes every installed app a key holder; use a proper key exchange / per-device key derivation",
-      "Require the key to be obfuscated in the binary using anti-reverse-engineering tools",
-      "Allow it but rotate the embedded key monthly via app updates",
+      "Reject — a static key in a distributed binary makes every installed app a key holder",
+      "Require the key to be obfuscated inside the binary using anti-reverse-engineering tooling",
+      "Allow it, but rotate the embedded key every month through app updates",
     ],
     answerIndex: 1,
     explanation:
@@ -83,10 +83,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: Your SOC sees a spike of failed logins against the VPN from a botnet. Accounts are being locked out at a rate that is starting to impact business. A junior analyst suggests lowering the lockout threshold from 5 to 3 to stop the attack faster. What is the BEST response?",
     options: [
-      "Approve — faster lockout reduces brute-force success",
-      "Reject — this accelerates the DoS the attacker is actually achieving; implement rate-limiting and IP reputation blocking instead",
-      "Disable account lockout entirely and rely on strong passwords",
-      "Shorten the lockout duration to 30 seconds",
+      "Approve, since a faster lockout reduces the chance of brute-force success",
+      "Reject — this accelerates the DoS the attacker is achieving; rate-limit and block by IP reputation",
+      "Disable account lockout entirely and rely on strong password requirements and monitoring instead",
+      "Shorten the lockout duration to thirty seconds and leave the threshold alone",
     ],
     answerIndex: 1,
     explanation:
@@ -101,10 +101,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: During an internal audit, a developer is found to have access to production databases containing customer data, because they occasionally troubleshoot live issues. The developer has been with the company for 8 years and has never caused an incident. What is the MOST appropriate remediation?",
     options: [
-      "No change — the developer's track record justifies the access",
-      "Remove the standing access; require just-in-time elevated access with approval workflow and audit logging",
-      "Move the developer to the operations team so the access is legitimate",
-      "Add the developer to the audit scope going forward",
+      "Make no change, since the developer's track record justifies the access",
+      "Remove the standing access; require just-in-time elevation with approval and audit logging",
+      "Move the developer into the operations team so that the standing access becomes formally legitimate",
+      "Add the developer to the audit scope from this point onwards",
     ],
     answerIndex: 1,
     explanation:
@@ -119,10 +119,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: Your pen-test vendor reports a SQL injection vulnerability on the customer login page. The application is scheduled for full replacement in 6 months. The development team estimates 3 weeks to fix properly; a WAF rule can be deployed in 4 hours. Finance pushes back on the 3-week effort. What is the BEST decision?",
     options: [
-      "Deploy the WAF rule only — the app is being retired anyway",
-      "Deploy the WAF rule AS compensating control now AND schedule the proper code fix; document the risk acceptance if the code fix is deferred",
-      "Take the app offline until the code is fixed",
-      "Accept the risk with sign-off from the CFO since the app is short-lived",
+      "Deploy only the WAF rule, since the application is being retired anyway",
+      "Deploy the WAF rule as a compensating control now and schedule the code fix; document any deferral",
+      "Take the application offline entirely until the code has been fixed",
+      "Accept the risk with written sign-off from the CFO, since the application is short-lived in any case",
     ],
     answerIndex: 1,
     explanation:
@@ -138,9 +138,9 @@ export const SCENARIO_QUESTIONS: Question[] = [
       "SCENARIO: A product manager asks the dev team to implement 'remember me' by storing the user's password in the browser's localStorage, encrypted with a key derived from the username. They argue this is more secure than a session cookie because it's 'encrypted'. What is the BEST response?",
     options: [
       "Approve — client-side encryption of credentials is acceptable for convenience features",
-      "Reject — issue a long-lived opaque refresh token bound to device and revocable server-side; never store the plaintext password",
-      "Approve but require the encryption key to be derived using PBKDF2 with 100,000 iterations",
-      "Approve but use sessionStorage instead of localStorage",
+      "Reject — issue a long-lived opaque refresh token bound to the device and revocable server-side",
+      "Approve, but require that the encryption key is derived using PBKDF2 with 100,000 iterations and a per-user salt",
+      "Approve, but store it in sessionStorage rather than localStorage",
     ],
     answerIndex: 1,
     explanation:
@@ -155,10 +155,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: Your BIA identifies an RTO of 4 hours for the payment processing system. Your DR plan documents a 12-hour recovery. The business owner has signed off on the DR plan. A regulator is auditing next week. What is your FIRST action?",
     options: [
-      "Update the BIA to match the DR plan's 12-hour RTO",
-      "Escalate the gap to executive leadership; either invest to close the gap or formally accept the residual risk with the business owner as risk owner",
-      "Rewrite both documents to show a 6-hour RTO as a compromise",
-      "Hide the discrepancy until after the audit, then remediate",
+      "Update the business impact analysis so that it matches the DR plan's twelve-hour RTO instead",
+      "Escalate the gap to executive leadership: invest to close it or formally accept the residual risk",
+      "Rewrite both documents so they show a six-hour RTO as a compromise position",
+      "Keep the discrepancy out of scope until after the audit, then remediate quietly",
     ],
     answerIndex: 1,
     explanation:
@@ -173,10 +173,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: A ransomware variant has encrypted 40% of your file servers. Backups are 18 hours old and verified. Attackers demand $2M, threatening to publish exfiltrated data in 72 hours. Law enforcement is engaged. The CEO wants to pay to stop the leak. What do you recommend FIRST?",
     options: [
-      "Pay the ransom — data leak damage exceeds $2M",
-      "Convene IR leadership + legal + privacy + comms to assess confirmed exfiltration scope, regulatory notification obligations, and insurance coverage before any payment decision",
-      "Publicly announce the breach before the attackers do",
-      "Negotiate the ransom down using a third-party firm",
+      "Pay the ransom immediately, since the damage from a public data leak exceeds two million dollars in total",
+      "Convene IR, legal, privacy and comms to assess scope, notification duties and insurance before any payment",
+      "Announce the breach publicly before the attackers get the chance to",
+      "Negotiate the ransom downwards using a specialist third-party firm",
     ],
     answerIndex: 1,
     explanation:
@@ -191,10 +191,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: An HR VP emails you asking to 'just delete' a former employee's mailbox 'to clean up storage'. The employee was involved in a pending wrongful-termination lawsuit. What is the BEST response?",
     options: [
-      "Delete the mailbox after verifying the user account is disabled",
+      "Delete the mailbox once you have verified the user account is disabled",
       "Refuse and place the mailbox on litigation hold; explain the duty to preserve and involve Legal",
-      "Archive the mailbox to tape and delete the online copy",
-      "Export the mailbox to PST, give it to HR, and delete the original",
+      "Archive the mailbox to tape and then delete the online copy of it",
+      "Export the mailbox to a PST file, hand it to HR, and delete the original copy afterwards",
     ],
     answerIndex: 1,
     explanation:
@@ -209,10 +209,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: Your organization is deploying a new microsegmentation solution. The network team wants to define policies based on source/destination IP. The security team argues for identity-based policies. Which approach BEST aligns with zero-trust principles?",
     options: [
-      "IP-based — it is faster and simpler to audit",
-      "Identity-based using workload identity (e.g., service accounts, SPIFFE), because IPs are ephemeral and don't express trust",
-      "A hybrid with IP policies for internal and identity policies for external",
-      "Whichever is cheaper — both meet zero-trust requirements equally",
+      "IP-based rules, since they are faster to evaluate and simpler to audit",
+      "Identity-based using workload identity, because IPs are ephemeral and express no trust",
+      "A hybrid using IP policies for internal traffic and identity policies for everything external",
+      "Whichever is cheaper to run, since both meet zero-trust requirements equally",
     ],
     answerIndex: 1,
     explanation:
@@ -227,10 +227,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: A product team wants to build a feature where users can share documents with external recipients via a public link. Engineering proposes obfuscated URLs with 128 bits of entropy. Security asks about expiry and revocation. The team responds 'nobody will guess the URL, and the user can just delete the document'. What is the BEST risk position?",
     options: [
-      "Accept — 128 bits of entropy is cryptographically sufficient",
+      "Accept it, since 128 bits of entropy is cryptographically sufficient protection on its own",
       "Require expiry, revocation, and access logging; treat the URL as a bearer capability token",
-      "Require the URL to be sent via encrypted email only",
-      "Reject the feature entirely — public links are never safe",
+      "Require that the URL is only ever sent by encrypted email",
+      "Reject the feature outright, since public share links are never safe",
     ],
     answerIndex: 1,
     explanation:
@@ -245,10 +245,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: During an access review, you find a contractor still has production access 90 days after their contract ended. The contractor never actually logged in after their end date. The hiring manager says 'no harm done'. What is the MOST appropriate response?",
     options: [
-      "Close the finding — no exploitation occurred",
-      "Revoke the access, document the process failure, investigate the identity-lifecycle gap that allowed the account to persist, and feed fixes into the JML workflow",
-      "Disable the account but keep it for potential future contract",
-      "Extend the contractor's access under a new contract",
+      "Close the finding on the basis that no actual exploitation of the dormant account ever occurred",
+      "Revoke the access, document the process failure, and fix the lifecycle gap in the JML workflow",
+      "Disable the account but retain it in case of a future contract",
+      "Extend the contractor's access under a newly issued contract",
     ],
     answerIndex: 1,
     explanation:
@@ -263,10 +263,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: Your SAST tool is generating 300 findings per week. Developers ignore the email reports. The AppSec team wants to enforce a gate blocking deploys on any HIGH finding. DevOps says this will stall releases. What is the BEST approach?",
     options: [
-      "Enforce the gate immediately — security is non-negotiable",
-      "Tune the tool to reduce false positives, integrate in PRs with developer-friendly context, and phase the gate by severity and repo maturity",
-      "Disable the tool and rely on quarterly pen tests",
-      "Accept the findings as informational and track trend metrics only",
+      "Enforce the gate immediately, since security is simply non-negotiable here",
+      "Tune the tool to cut false positives, surface findings in PRs, and phase the gate by severity",
+      "Disable the tool and rely on quarterly penetration tests instead",
+      "Accept the findings as informational only and simply track the trend metrics over time instead",
     ],
     answerIndex: 1,
     explanation:
@@ -281,10 +281,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: A developer is debugging a production issue and pastes a real customer record (including SSN) into a public Slack channel in a screenshot. The channel has 200 members and an external integration. The developer deletes the message 10 minutes later. What is your FIRST action?",
     options: [
-      "Mark the incident closed once the message is deleted",
-      "Treat as a confirmed data-exposure incident: preserve audit logs, identify all recipients (internal + integration retention), determine regulatory-notification obligations, and begin the IR playbook",
-      "Ask Slack support to permanently wipe the message from all caches",
-      "Warn the developer and require security-awareness training",
+      "Mark the incident closed as soon as the message itself has been deleted",
+      "Treat it as a confirmed exposure: preserve logs, identify recipients, and run the IR playbook",
+      "Ask Slack support to permanently wipe the message from every cache and backup they hold anywhere",
+      "Warn the developer and require them to redo security-awareness training",
     ],
     answerIndex: 1,
     explanation:
@@ -299,10 +299,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: Your organization is adopting an AI coding assistant that sends source code snippets to a third-party model provider. Legal asks whether this exposes you to IP or data-leak risk. Engineering loves the productivity boost. Finance sees cost savings. What is the BEST governance response?",
     options: [
-      "Block the tool — any third-party code exposure is unacceptable",
-      "Establish an acceptable-use policy, vendor risk assessment, data-classification boundary (no secrets/PII), and contractual protection — then enable it with monitoring",
-      "Allow engineers to use it at their own discretion with a best-effort warning",
-      "Approve only for non-production repositories",
+      "Block the tool outright, since any third-party code exposure is unacceptable",
+      "Set an acceptable-use policy, assess the vendor, bound what data may be shared, then enable it",
+      "Let engineers use it entirely at their own discretion, with only a best-effort warning attached",
+      "Approve it for use against non-production repositories only",
     ],
     answerIndex: 1,
     explanation:
@@ -317,10 +317,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: A vendor claims their SaaS product uses 'military-grade encryption' and 'zero trust'. They can't produce a SOC 2, ISO 27001, or penetration test report. Your CTO has already told the business unit it's approved. What is the BEST next step?",
     options: [
-      "Sign off since the CTO has approved it",
-      "Escalate to the CISO or risk committee; the absence of independent assurance fails your third-party risk framework regardless of buzzwords",
-      "Require the vendor to complete your security questionnaire before go-live",
-      "Monitor vendor traffic via your CASB and accept the risk",
+      "Sign it off on the basis that the CTO has already approved it",
+      "Escalate to the CISO or risk committee; no independent assurance fails your third-party framework",
+      "Require the vendor to complete your own security questionnaire before they are allowed to go live",
+      "Monitor the vendor's traffic through your CASB and accept the residual risk",
     ],
     answerIndex: 1,
     explanation:
@@ -335,10 +335,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: A new colleague in the SOC has configured alerts on every failed authentication. Alert volume is now 15,000/day and the team is missing real incidents. The colleague argues 'more visibility is always better'. What is the BEST coaching response?",
     options: [
-      "Agree — coverage beats noise",
-      "Alert volume without signal is anti-visibility; tune alerts to high-fidelity detection use-cases and surface low-fidelity signals through aggregation/correlation, not paging",
-      "Hire more SOC analysts to handle the volume",
-      "Automate a response action on every failed login",
+      "Agree, on the basis that broad coverage always beats a quieter console in a real incident response",
+      "Alert volume without signal is anti-visibility; tune to high-fidelity detections and aggregate the rest",
+      "Hire more SOC analysts so the team can handle the alert volume",
+      "Automate a response action on every single failed login attempt",
     ],
     answerIndex: 1,
     explanation:
@@ -353,10 +353,10 @@ export const SCENARIO_QUESTIONS: Question[] = [
     prompt:
       "SCENARIO: Your company is expanding into the EU. A product team wants to deploy the existing US-hosted application to EU customers without changes. The team claims 'we already encrypt everything, so GDPR is covered'. What is the BEST response?",
     options: [
-      "Approve — encryption at rest and in transit satisfies GDPR",
-      "Encryption is one control, not a compliance strategy; GDPR requires lawful basis, data-subject rights, cross-border transfer mechanism, DPO considerations, and DPIA — engage Privacy/Legal before any EU launch",
-      "Add a cookie banner and proceed",
-      "Host the app in the EU region only, and GDPR does not apply",
+      "Approve, since encryption at rest and in transit satisfies GDPR",
+      "Encryption is one control, not a strategy: GDPR needs lawful basis, subject rights and a DPIA",
+      "Add a cookie banner to the site and proceed with the launch",
+      "Host the application in an EU region only, on the basis that GDPR then does not apply to it at all",
     ],
     answerIndex: 1,
     explanation:
