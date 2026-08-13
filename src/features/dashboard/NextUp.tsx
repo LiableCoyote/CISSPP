@@ -9,6 +9,7 @@ import { breakdownMisses, buildRemediation } from "../../lib/remediation";
 import { countDue } from "../../lib/questionSrs";
 import { shouldNudge } from "../../lib/reminders";
 import { getItem } from "../../lib/safeStorage";
+import { daysSinceBackup, backupKey } from "../../lib/storage";
 
 const DISMISS_KEY = "cisspp-dismissed-signals";
 const MAX_RECOMMENDATIONS = 2;
@@ -82,6 +83,8 @@ export default function NextUp({
       preferredTime: getItem("cisspp-reminder-time") || "18:00",
       now,
     }),
+    // The only real protection against the browser clearing this data.
+    daysSinceBackup: daysSinceBackup(getItem(backupKey()), now),
   }).filter((s) => !dismissed.includes(s.id));
 
   const remediation = buildRemediation(

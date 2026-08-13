@@ -152,6 +152,88 @@ describe("detectStudySignals", () => {
   const none = { studyLog: [], attempts: [], lastActiveDate: null, streak: 0, overdueCards: 0, now: NOW };
   const ids = (s: ReturnType<typeof detectStudySignals>) => s.map((x) => x.id);
 
+  describe("backup-stale", () => {
+    // Three active days is the floor: nagging a brand-new user about backing up
+    // an empty database is pure noise.
+    const active = [logDay(0, 45), logDay(1, 45), logDay(2, 45)];
+
+    it("stays quiet before there is anything worth losing", () => {
+      const s = detectStudySignals({
+        ...none,
+        studyLog: [logDay(0, 45)],
+        lastActiveDate: day(0),
+        daysSinceBackup: null,
+      });
+      expect(ids(s)).not.toContain("backup-stale");
+    });
+
+    it("fires when a real user has never exported", () => {
+      const s = detectStudySignals({
+        ...none,
+        studyLog: active,
+        lastActiveDate: day(0),
+        daysSinceBackup: null,
+      });
+      expect(ids(s)).toContain("backup-stale");
+      expect(s.find((x) => x.id === "backup-stale")!.title).toMatch(/never exported/i);
+    });
+
+    it("stays quiet on a recent backup", () => {
+      const s = detectStudySignals({
+        ...none,
+        studyLog: active,
+        lastActiveDate: day(0),
+        daysSinceBackup: 2,
+      });
+      expect(ids(s)).not.toContain("backup-stale");
+    });
+
+    it("fires once the backup goes stale", () => {
+      const s = detectStudySignals({
+        ...none,
+        studyLog: active,
+        lastActiveDate: day(0),
+        daysSinceBackup: 7,
+      });
+      expect(ids(s)).toContain("backup-stale");
+      expect(s.find((x) => x.id === "backup-stale")!.title).toMatch(/7 days ago/);
+    });
+
+    // A snapshot lives in the same database that gets evicted, so it is not a
+    // backup. The copy has to say so or it teaches the wrong lesson.
+    it("explains that a snapshot won't save you", () => {
+      const s = detectStudySignals({
+        ...none,
+        studyLog: active,
+        lastActiveDate: day(0),
+        daysSinceBackup: 30,
+      });
+      const body = s.find((x) => x.id === "backup-stale")!.body;
+      expect(body).toMatch(/snapshot won't help/i);
+      expect(body).toMatch(/downloaded file/i);
+    });
+
+    it("points at somewhere the user can actually export", () => {
+      const s = detectStudySignals({
+        ...none,
+        studyLog: active,
+        lastActiveDate: day(0),
+        daysSinceBackup: null,
+      });
+      const sig = s.find((x) => x.id === "backup-stale")!;
+      expect(sig.to).toBe("/settings");
+      expect(sig.actionLabel).toMatch(/export/i);
+    });
+
+    // Omitting the field defaults to null, which means "never exported" — the
+    // truthful reading for a caller that has no record of one. It fails toward
+    // reminding rather than toward silence.
+    it("treats an omitted backup date as never exported", () => {
+      const s = detectStudySignals({ ...none, studyLog: active, lastActiveDate: day(0) });
+      expect(ids(s)).toContain("backup-stale");
+    });
+  });
+
   it("stays quiet for a healthy pattern", () => {
     expect(
       detectStudySignals({ ...none, studyLog: [logDay(0, 45)], lastActiveDate: day(0) }),

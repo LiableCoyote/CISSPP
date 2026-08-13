@@ -8,6 +8,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import RouteErrorBoundary from "./components/RouteErrorBoundary";
 import UpdatePrompt from "./components/UpdatePrompt";
 import PomodoroFab from "./components/PomodoroFab";
+import { requestPersistence } from "./lib/storage";
 
 const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage"));
 const CampaignPage = lazy(() => import("./features/plan/CampaignPage"));
@@ -85,6 +86,10 @@ function App() {
       .then(() => initProfile())
       // Best-effort and non-blocking: a snapshot must never delay startup.
       .then(() => maybeDailySnapshot().catch((err) => console.error("Daily snapshot:", err)))
+      // Ask the browser to stop treating months of study history as disposable.
+      // Best-effort and non-blocking, exactly like the snapshot above — it must
+      // never delay first paint, and being refused is an ordinary outcome.
+      .then(() => requestPersistence().catch(() => "unsupported" as const))
       .catch((err: unknown) => {
         console.error("Startup failed:", err);
         setStartupError(err instanceof Error ? err.message : "Unknown error");

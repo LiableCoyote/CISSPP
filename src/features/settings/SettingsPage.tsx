@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { format, parseISO } from "date-fns";
 import { useProfile } from "../../state/profile";
@@ -12,6 +12,16 @@ import {
   enableBackgroundReminder,
   disableBackgroundReminder,
 } from "../../lib/reminders";
+import {
+  backupKey,
+  persistenceState,
+  storageEstimate,
+  describePersistence,
+  formatBytes,
+  daysSinceBackup,
+  type PersistenceState,
+  type StorageUsage,
+} from "../../lib/storage";
 import { getWeekKey } from "../../lib/streak";
 import ProfileSwitcher from "../../components/ProfileSwitcher";
 
@@ -30,10 +40,22 @@ export default function SettingsPage() {
   // Capability probe, not a branch on behaviour: the summary is shown to the
   // user so the toggle never implies more than the browser can do.
   const [support] = useState(reminderSupport);
+  const [lastBackup, setLastBackup] = useState<string | null>(() => getItem(backupKey()));
+  const [persistence, setPersistence] = useState<PersistenceState | null>(null);
+  const [usage, setUsage] = useState<StorageUsage | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [pendingImport, setPendingImport] = useState<File | null>(null);
   const snapshots = useLiveQuery(() => listSnapshots()) || [];
+
+  // Read-only probes. requestPersistence() runs once at startup in App.tsx;
+  // this only reports the answer rather than asking again.
+  useEffect(() => {
+    void persistenceState().then(setPersistence);
+    void storageEstimate().then(setUsage);
+  }, []);
+
+  const backupAgeDays = daysSinceBackup(lastBackup);
 
   if (!profile) return null;
 
@@ -95,6 +117,10 @@ export default function SettingsPage() {
     try {
       const data = await exportData();
       downloadJSON(data, `cisspp-backup-${new Date().toISOString().split("T")[0]}.json`);
+      // Slot-scoped: a backup covers one profile's data, so another slot's
+      // export says nothing about whether this one is protected.
+      setItem(backupKey(), new Date().toISOString());
+      setLastBackup(new Date().toISOString());
       setImportStatus("✓ Backup downloaded.");
       setTimeout(() => setImportStatus(null), 3000);
     } catch (err) {
@@ -305,6 +331,55 @@ export default function SettingsPage() {
           {reminderStatus && <p className="text-sm text-accent mt-2">{reminderStatus}</p>}
         </div>
       </div>
+
+      <section aria-labelledby="durability-heading" className="card mb-4">
+        <h3 id="durability-heading" className="font-semibold mb-1">Where Your Data Lives</h3>
+        <p className="text-sm text-dim mb-3">
+          Everything is in this browser, on this device. There is no server copy.
+        </p>
+        <dl className="text-sm space-y-2">
+          <div className="flex justify-between gap-3">
+            <dt className="text-dim">Browser keeps it</dt>
+            <dd className="font-medium text-right">
+              {persistence === null
+                ? "checking…"
+                : persistence === "granted"
+                  ? "Yes — persistent"
+                  : persistence === "denied"
+                    ? "Best effort only"
+                    : "Unknown"}
+            </dd>
+          </div>
+          {usage && (
+            <div className="flex justify-between gap-3">
+              <dt className="text-dim">Space used</dt>
+              <dd className="font-medium text-right">
+                {formatBytes(usage.usageBytes)}{" "}
+                <span className="text-dim">of {formatBytes(usage.quotaBytes)}</span>
+              </dd>
+            </div>
+          )}
+          <div className="flex justify-between gap-3">
+            <dt className="text-dim">Last export</dt>
+            <dd
+              className={`font-medium text-right ${backupAgeDays === null || backupAgeDays >= 7 ? "text-warn" : ""}`}
+            >
+              {lastBackup === null
+                ? "Never"
+                : backupAgeDays === 0
+                  ? "Today"
+                  : `${backupAgeDays} day${backupAgeDays === 1 ? "" : "s"} ago`}
+            </dd>
+          </div>
+        </dl>
+        {/* The honest part. Persistence is a request, not a guarantee, and on
+            the platform most likely to evict this data it does nothing. */}
+        {persistence !== null && (
+          <p className="text-xs text-dim mt-3 border-t border-border pt-3">
+            {describePersistence(persistence)}
+          </p>
+        )}
+      </section>
 
       <div className="card mb-4">
         <h3 className="font-semibold mb-3">Backup & Restore</h3>

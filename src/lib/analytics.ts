@@ -248,7 +248,8 @@ export type StudySignal = {
     | "backlog"
     | "domain-cram"
     | "domain-hoard"
-    | "daily-reminder";
+    | "daily-reminder"
+    | "backup-stale";
   severity: "warn" | "danger" | "info";
   icon: string;
   title: string;
@@ -266,6 +267,16 @@ const DORMANT_DAYS = 3;
 const BACKLOG_CARDS = 40;
 const DOMAIN_CRAM_ATTEMPTS = 6;
 const HOARD_SHARE = 0.6;
+/**
+ * Days without an export before it's worth interrupting for.
+ *
+ * A week rather than a day: nagging about backups every session trains the user
+ * to dismiss the banner, which is exactly what you don't want the one time the
+ * warning matters.
+ */
+const BACKUP_STALE_DAYS = 7;
+/** Below this there is little enough at stake that a backup nag is just noise. */
+const BACKUP_MIN_ACTIVE_DAYS = 3;
 
 /** Counts completed attempts per domain within the last `days`. */
 function attemptsByDomain(
@@ -301,6 +312,12 @@ export function detectStudySignals(opts: {
    * no access to storage.
    */
   nudgeDue?: boolean;
+  /**
+   * Whole days since the last successful export, or null if there has never
+   * been one. Computed by the caller via `daysSinceBackup` so this module needs
+   * no access to storage.
+   */
+  daysSinceBackup?: number | null;
   /** Injectable so the whole signal set can be evaluated at a fixed instant. */
   now?: Date;
 }): StudySignal[] {
@@ -311,6 +328,7 @@ export function detectStudySignals(opts: {
     streak,
     overdueCards,
     nudgeDue = false,
+    daysSinceBackup = null,
     now: today = new Date(),
   } = opts;
   const signals: StudySignal[] = [];
@@ -368,6 +386,25 @@ export function detectStudySignals(opts: {
       to: "/flashcards",
       actionLabel: "Review flashcards",
     });
+  }
+
+  // Stale backup — the only real protection against the browser clearing this
+  // data. Gated on there being something worth losing, so a brand-new user
+  // isn't nagged about backing up an empty database.
+  const activeDays = studyLog.filter((l) => l.minutes > 0).length;
+  if (activeDays >= BACKUP_MIN_ACTIVE_DAYS) {
+    const never = daysSinceBackup === null;
+    if (never || daysSinceBackup >= BACKUP_STALE_DAYS) {
+      signals.push({
+        id: "backup-stale",
+        severity: "warn",
+        icon: "💾",
+        title: never ? "You've never exported a backup" : `Last backup was ${daysSinceBackup} days ago`,
+        body: `${activeDays} days of study live only in this browser. Browsers clear site data to free space — on iOS after about a week of not opening the app — and a snapshot won't help, because it goes with everything else. A downloaded file is the only copy that survives.`,
+        to: "/settings",
+        actionLabel: "Export a backup",
+      });
+    }
   }
 
   // Dormant — streak already broken or about to.

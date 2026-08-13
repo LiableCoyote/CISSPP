@@ -94,7 +94,17 @@ slower launch, not missing content.
 
 Backups are versioned. Versions 1 and 2 still restore; version 2 added
 vault-game wins and your reminder settings, and version 3 adds the retry
-schedule for missed questions. The app also keeps the three most recent
+schedule for missed questions.
+
+On first launch the app calls `navigator.storage.persist()` to ask the browser
+not to clear this data to free space. **That is a request, not a guarantee.**
+Chrome decides silently, Firefox prompts, and Safari and iOS effectively ignore
+it — on iOS site data can still be cleared after about a week of not opening the
+app. Settings shows what your browser actually answered rather than assuming.
+
+The snapshots are not a backup: they live in the same database, so anything that
+clears it takes them too. **Only a downloaded export survives.** The app tracks
+when you last exported and raises a dashboard reminder once it goes stale. The app also keeps the three most recent
 automatic snapshots (daily, and before any import or reset) so an accidental
 restore is undoable from **Settings → Backup & Restore**.
 
@@ -163,12 +173,12 @@ that upstream range catches up.
 
 ### Tests
 
-402 tests over the pure logic: export/import and every rejection path, analytics
+429 tests over the pure logic: export/import and every rejection path, analytics
 and study signals, recommendations, miss remediation, campaign/date helpers, quiz scoring and
 question selection, question spaced repetition,
 confidence calibration, exam pacing, readiness weighting and projection,
 reminder scheduling and capability detection,
-failure reporting, XP rewards, profile slots, quick-test generation, SM-2, XP
+failure reporting, storage durability and backup age, XP rewards, profile slots, quick-test generation, SM-2, XP
 levels, ISO week keys, guarded storage, seed idempotency snapshots and the
 achievement engine. No jsdom, no component tests — Dexie runs on
 `fake-indexeddb`.
