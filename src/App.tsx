@@ -23,6 +23,7 @@ const DomainsPage = lazy(() => import("./features/domains/DomainsPage"));
 const DomainDetailPage = lazy(() => import("./features/domains/DomainDetailPage"));
 const VaultPage = lazy(() => import("./features/vault/VaultPage"));
 const StatsPage = lazy(() => import("./features/stats/StatsPage"));
+const GapsPage = lazy(() => import("./features/gaps/GapsPage"));
 const AchievementsPage = lazy(() => import("./features/achievements/AchievementsPage"));
 const PaceBoardPage = lazy(() => import("./features/stats/PaceBoardPage"));
 const StudyReportPage = lazy(() => import("./features/stats/StudyReportPage"));
@@ -140,6 +141,7 @@ function App() {
                     <Route path="/domains/:id" element={<DomainDetailPage />} />
                     <Route path="/vault" element={<VaultPage />} />
                     <Route path="/stats" element={<StatsPage />} />
+                    <Route path="/gaps" element={<GapsPage />} />
                     <Route path="/achievements" element={<AchievementsPage />} />
                     <Route path="/pace" element={<PaceBoardPage />} />
                     <Route path="/report" element={<StudyReportPage />} />

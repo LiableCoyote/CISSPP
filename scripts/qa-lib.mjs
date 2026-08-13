@@ -12,6 +12,7 @@ export const ROUTES = [
   "/domains",
   "/vault",
   "/stats",
+  "/gaps",
   "/achievements",
   "/pace",
   "/report",

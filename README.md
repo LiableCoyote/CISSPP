@@ -29,7 +29,9 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
   its own uncertainty attached: untested and thinly-covered domains are named,
   and a trend line is only drawn when there's enough history to justify one
 - **Pace Board** — your standing against six reference study paces, scaled to your campaign week
-- **Study report** — printable summary (campaign, mastery, quiz history, achievements); save as PDF from the browser print dialog
+- **Study report** — printable summary (readiness with its caveats, calibration, pacing, campaign, mastery, quiz history, achievements); save as PDF from the browser print dialog
+- **Your Gaps** — every question you've missed, what keeps catching you out, and
+  when each one comes back; prompts only, never the answers
 - **Share card** — PNG export with weekly deltas and a progress headline
 - **Pomodoro FAB** that logs focus minutes automatically
 - **Daily reminder** — an in-app nudge at your preferred time on every platform,
@@ -40,7 +42,7 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **PWA** — installs to home screen, works 100% offline after first load
 - **Fast to start** — 290KB entry chunk; the question bank, flashcard deck and
   vault tables load on demand, not before the first paint
-- **Accessible** — WCAG 2.1 AA: zero axe-core violations across all 12 routes; skip links, ARIA landmarks, keyboard-only operation, reduced-motion support
+- **Accessible** — WCAG 2.1 AA: zero axe-core violations across all 13 routes; skip links, ARIA landmarks, keyboard-only operation, reduced-motion support
 - **Safe by default** — automatic snapshots before anything destructive, a confirmation step on import, a validated backup format, and a failed write that says so instead of celebrating
 - **Truly offline** — fonts are bundled, not fetched; the app makes no third-party request at any point
 
@@ -166,7 +168,7 @@ it *does* run in CI, which is the only place it can.
 - lint, typecheck and the full unit suite
 - route and accessibility sweeps across **Chromium, Firefox and WebKit**
 
-WebKit passed its first real run clean, across all 12 routes at all three
+WebKit passed its first real run clean, across all 13 routes at all three
 viewports. That was not a foregone conclusion — it had never executed the app
 anywhere before CI existed.
 

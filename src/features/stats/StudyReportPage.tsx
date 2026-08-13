@@ -9,8 +9,21 @@ import { WEEK_META } from "../../data/weeks";
 import { xpToLevel } from "../../lib/xp";
 import { buildWeeklySummary } from "../../lib/analytics";
 import { describeMode } from "../../lib/scoring";
+import { readiness, projectReadiness, coverageByDomain } from "../../lib/readiness";
+import { calibrationCurve, confidentMisses } from "../../lib/calibration";
+import { pacingStats, describePacing, EXAM_BUDGET_SECONDS } from "../../lib/pacing";
 
 const RECENT_ATTEMPT_LIMIT = 20;
+
+const READINESS_LABEL = {
+  "on-track": "On track",
+  borderline: "Borderline",
+  "not-ready": "Not ready yet",
+} as const;
+
+const CONFIDENCE_LABEL = {
+  1: "Guessing", 2: "Unsure", 3: "Leaning", 4: "Confident", 5: "Certain",
+} as const;
 
 /**
  * Print-optimised study summary. Rendered as a route rather than a modal
@@ -24,8 +37,14 @@ export default function StudyReportPage() {
   const studyLog = useLiveQuery(() => db.studyLog.toArray());
   const unlocks = useLiveQuery(() => db.achievements.toArray());
   const flashcards = useLiveQuery(() => db.flashcards.toArray());
+  const answers = useLiveQuery(() => db.answers.toArray());
+  const questionDomains = useLiveQuery(async () => {
+    const rows = await db.questions.toArray();
+    return new Map(rows.map((q) => [q.id, q.domainId as number]));
+  });
 
   if (!profile || !attempts || !quests || !studyLog || !unlocks || !flashcards) return null;
+  if (!answers || !questionDomains) return null;
 
   const today = new Date();
   const finished = attempts.filter((a) => a.finishedAt);
@@ -33,6 +52,13 @@ export default function StudyReportPage() {
     ? differenceInCalendarDays(parseISO(profile.examDate), today)
     : null;
   const { level, levelTitle } = xpToLevel(profile.xp);
+
+  const ready = readiness(attempts, coverageByDomain(answers, (id) => questionDomains.get(id)));
+  const projection = projectReadiness(attempts, profile.examDate);
+  const calibration = calibrationCurve(answers);
+  const confident = confidentMisses(answers);
+  const pacing = pacingStats(answers);
+  const pacingNote = describePacing(pacing);
 
   const totalMinutes = studyLog.reduce((s, d) => s + d.minutes, 0);
   const activeDays = studyLog.filter((d) => d.minutes > 0).length;
@@ -160,6 +186,110 @@ export default function StudyReportPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Readiness — first, because it is the number the report exists to answer.
+          The caveats print with it, never without: this is the version of the
+          report that gets shown to other people, so an unqualified percentage
+          would travel further than the qualification. */}
+      <div className="card mb-4">
+        <h3 className="font-semibold mb-3">Exam Readiness</h3>
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <p className="text-3xl font-bold tabular-nums">{ready.scorePct}%</p>
+          <p className="text-sm">
+            <span className="font-semibold">{READINESS_LABEL[ready.band]}</span>
+            <span className="text-dim"> · exam-weighted · {ready.confidence} confidence</span>
+          </p>
+        </div>
+        {projection && (
+          <p className="text-sm mt-2">
+            At the last two weeks' rate ({projection.perDay > 0 ? "+" : ""}
+            {projection.perDay} pts/day) that trend reaches{" "}
+            <span className="font-semibold">{projection.projectedPct}%</span> in{" "}
+            {projection.daysRemaining} days — a straight line through recent scores, not a
+            forecast.
+          </p>
+        )}
+        <ul className="mt-3 space-y-1" role="list">
+          {ready.caveats.map((c) => (
+            <li key={c} className="text-xs text-dim flex gap-2">
+              <span aria-hidden="true" className="shrink-0">·</span>
+              <span>{c}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Calibration and pacing */}
+      <div className="card mb-4">
+        <h3 className="font-semibold mb-3">Calibration &amp; Pacing</h3>
+
+        {calibration.insufficient ? (
+          // Refuses on paper for the same reason it refuses on screen: a curve
+          // drawn from a handful of answers reads as settled once printed.
+          <p className="text-sm text-dim">
+            Confidence calibration needs {calibration.needed} rated answers — {calibration.rated} so
+            far, so no curve is shown.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm mb-2">
+              <span className="font-semibold">
+                {calibration.verdict === "well-calibrated"
+                  ? "Well calibrated"
+                  : calibration.verdict === "overconfident"
+                    ? "Overconfident"
+                    : "Underconfident"}
+              </span>
+              <span className="text-dim"> across {calibration.rated} rated answers.</span>
+              {confident.confident > 0 && (
+                <span className="text-dim">
+                  {" "}
+                  Sure on {confident.confident}, wrong on {confident.wrong} of them.
+                </span>
+              )}
+            </p>
+            <table className="w-full text-sm mb-3">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-1.5 text-xs uppercase tracking-wider text-dim font-medium">Rated</th>
+                  <th className="text-right py-1.5 text-xs uppercase tracking-wider text-dim font-medium">Answers</th>
+                  <th className="text-right py-1.5 text-xs uppercase tracking-wider text-dim font-medium">Correct</th>
+                </tr>
+              </thead>
+              <tbody>
+                {calibration.buckets
+                  .filter((b) => b.count > 0)
+                  .map((b) => (
+                    <tr key={b.confidence} className="border-b border-border/50 last:border-0">
+                      <td className="py-1.5">{CONFIDENCE_LABEL[b.confidence]}</td>
+                      <td className="py-1.5 text-right text-dim tabular-nums">{b.count}</td>
+                      <td className="py-1.5 text-right font-semibold tabular-nums">
+                        {b.reliable ? `${b.accuracyPct}%` : "too few"}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {pacingNote === null ? (
+          <p className="text-sm text-dim">
+            Not enough answered questions yet to report a pace.
+          </p>
+        ) : (
+          <p className="text-sm">
+            <span className="font-semibold">
+              {pacing.medianSeconds}s median
+            </span>
+            <span className="text-dim">
+              {" "}
+              ({pacing.medianCorrectSeconds}s when right, {pacing.medianIncorrectSeconds}s when
+              wrong) against the {EXAM_BUDGET_SECONDS}s exam budget. {pacingNote}
+            </span>
+          </p>
+        )}
       </div>
 
       {/* Domain mastery */}

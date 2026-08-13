@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { DOMAINS } from "../../data/domains";
@@ -70,7 +70,7 @@ export default function QuizLauncherPage() {
       <button
         onClick={() => dueMisses > 0 && start("misses")}
         disabled={dueMisses === 0}
-        className="card card-hover w-full text-left block mb-4 disabled:opacity-50 disabled:cursor-not-allowed border-xp/40 bg-xp/5"
+        className="card card-hover w-full text-left block disabled:opacity-50 disabled:cursor-not-allowed border-xp/40 bg-xp/5"
         aria-label={
           dueMisses > 0
             ? `Retry your misses. ${dueMisses} question${dueMisses === 1 ? "" : "s"} due.`
@@ -97,6 +97,14 @@ export default function QuizLauncherPage() {
           </div>
         </div>
       </button>
+      {/* Outside the button on purpose: a link nested inside a button is
+          interactive content within interactive content, which is invalid HTML
+          and leaves screen readers with an ambiguous target. */}
+      <div className="mb-4 -mt-2 text-right">
+        <Link to="/gaps" className="text-xs text-dim hover:text-accent hover:underline">
+          See everything you've missed →
+        </Link>
+      </div>
 
       {/* Mixed set */}
       <button
