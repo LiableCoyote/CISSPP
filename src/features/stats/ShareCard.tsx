@@ -70,7 +70,7 @@ export default function ShareCard() {
       link.remove();
       pushToast({ variant: "success", icon: "📸", title: "Share card saved", durationMs: 2500 });
     } catch (err) {
-      console.error(err);
+      console.error("Share card export failed:", err);
       pushToast({ variant: "warn", icon: "⚠️", title: "Couldn't generate the image" });
     } finally {
       setExporting(false);

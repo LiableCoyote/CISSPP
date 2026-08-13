@@ -36,7 +36,7 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **Fast to start** — 290KB entry chunk; the question bank, flashcard deck and
   vault tables load on demand, not before the first paint
 - **Accessible** — WCAG 2.1 AA: zero axe-core violations across all 12 routes; skip links, ARIA landmarks, keyboard-only operation, reduced-motion support
-- **Safe by default** — automatic snapshots before anything destructive, a confirmation step on import, and a validated backup format
+- **Safe by default** — automatic snapshots before anything destructive, a confirmation step on import, a validated backup format, and a failed write that says so instead of celebrating
 - **Truly offline** — fonts are bundled, not fetched; the app makes no third-party request at any point
 
 ## Local development
@@ -163,11 +163,12 @@ that upstream range catches up.
 
 ### Tests
 
-394 tests over the pure logic: export/import and every rejection path, analytics
+402 tests over the pure logic: export/import and every rejection path, analytics
 and study signals, recommendations, miss remediation, campaign/date helpers, quiz scoring and
 question selection, question spaced repetition,
 confidence calibration, exam pacing, readiness weighting and projection,
-reminder scheduling and capability detection, XP rewards, profile slots, quick-test generation, SM-2, XP
+reminder scheduling and capability detection,
+failure reporting, XP rewards, profile slots, quick-test generation, SM-2, XP
 levels, ISO week keys, guarded storage, seed idempotency snapshots and the
 achievement engine. No jsdom, no component tests — Dexie runs on
 `fake-indexeddb`.

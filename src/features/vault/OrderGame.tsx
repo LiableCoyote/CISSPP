@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Reorder } from "framer-motion";
 import { db } from "../../db/schema";
 import { checkAchievements } from "../achievements/engine";
+import { reportFailure } from "../../lib/failure";
 
 interface Props {
   /** Stable id of the sequence, used to record wins. */
@@ -44,7 +45,14 @@ export default function OrderGame({ gameId, title, canonicalOrder, hint, onQuick
         });
         await checkAchievements({ kind: "vault-order-win", gameId });
       } catch (err) {
-        console.error("Recording vault win failed", err);
+        // Silently swallowing this was worse than it looked: `bia-first` unlocks
+        // off the vaultWins row, so a failed write here made that achievement
+        // permanently unreachable with nothing to explain why.
+        reportFailure(
+          "record that win",
+          err,
+          "The sequence was right, but the win wasn't saved — so it won't count toward the vault achievements.",
+        );
       }
     })();
   }, [checked, correct, gameId]);

@@ -4,6 +4,7 @@ import type { OrderGameDef } from "../../data/vault";
 import { buildQuickTest, QUICK_TEST_SECONDS, type QuickTestQuestion } from "./quickTest";
 import { checkAchievements } from "../achievements/engine";
 import { pushToast } from "../../state/toast";
+import { reportFailure } from "../../lib/failure";
 import { useProfile } from "../../state/profile";
 import { logStudySession } from "../../lib/session";
 import { quickTestXp } from "../../lib/rewards";
@@ -71,24 +72,31 @@ export default function QuickTestMode({
           await updateProfile({ xp: p.xp + xpGain, ...patch });
         }
         await checkAchievements({ kind: "vault-quick-test", tableId: game.id, scorePct });
+
+        // Inside the try, on purpose. This toast used to fire unconditionally
+        // outside it, so a run whose XP, streak and studyLog writes had all
+        // failed still ended on a celebration.
+        pushToast({
+          variant: scorePct === 100 ? "success" : scorePct >= 60 ? "info" : "warn",
+          icon: scorePct === 100 ? "🏛️" : scorePct >= 60 ? "✅" : "📖",
+          title: `${game.title}: ${scorePct}%`,
+          body:
+            scorePct === 100
+              ? "Perfect recall. That sequence is locked in."
+              : `${correctCount} of ${questions.length} correct. Re-drag the order, then retest.`,
+        });
       } catch (err) {
-        console.error("Logging vault quick test failed", err);
+        reportFailure(
+          "save this quick test",
+          err,
+          `You scored ${scorePct}%, but the XP and streak for it weren't recorded.`,
+        );
       } finally {
         // Achievement XP is written straight to Dexie by the engine, so without
         // this the store stays stale and the dashboard shows the old total.
         await refreshProfile();
       }
     })();
-
-    pushToast({
-      variant: scorePct === 100 ? "success" : scorePct >= 60 ? "info" : "warn",
-      icon: scorePct === 100 ? "🏛️" : scorePct >= 60 ? "✅" : "📖",
-      title: `${game.title}: ${scorePct}%`,
-      body:
-        scorePct === 100
-          ? "Perfect recall. That sequence is locked in."
-          : `${correctCount} of ${questions.length} correct. Re-drag the order, then retest.`,
-    });
   }, [done, scorePct, correctCount, questions.length, game.id, game.title, updateProfile, refreshProfile]);
 
   const pick = (i: number) => {
