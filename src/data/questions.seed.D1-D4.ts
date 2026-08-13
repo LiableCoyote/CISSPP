@@ -5,7 +5,7 @@ const D1: Question[] = [
   {
     id: "d1-001",
     domainId: 1,
-    prompt: "During a risk assessment, you discover a vulnerability in a critical system. You have the option to: A) Immediately patch the system without testing, B) Document the vulnerability and establish a patch management process, C) Wait until the next maintenance window, D) Inform only the IT team.",
+    prompt: "During a risk assessment you discover a vulnerability in a critical system. What should you do FIRST?",
     options: [
       "Immediately patch the system without testing",
       "Document the vulnerability and establish a patch management process",
@@ -559,15 +559,15 @@ const D3: Question[] = [
   {
     id: "d3-008",
     domainId: 3,
-    prompt: "A certificate revocation can occur because: A) The private key was compromised, B) The domain is no longer in use, C) The certificate owner left the organization, D) All of the above.",
+    prompt: "An employee leaves the organisation and their private key is suspected of having been copied. What happens to their certificate, and how do relying parties find out?",
     options: [
-      "Only A",
-      "Only B and C",
-      "All of the above",
-      "Only A and D",
+      "Revoke it; relying parties check a CRL or an OCSP responder",
+      "Let it expire naturally; relying parties check the validity dates",
+      "Reissue it to their replacement; relying parties check the subject name",
+      "Disable their account; relying parties check directory group membership",
     ],
-    answerIndex: 2,
-    explanation: "All are valid reasons for revocation. CRL and OCSP services must be checked to verify a certificate hasn't been revoked.",
+    answerIndex: 0,
+    explanation: "Key compromise and role change are both valid revocation reasons, and revocation is only useful if relying parties check it — via a CRL or an OCSP responder. Waiting for expiry leaves a usable certificate in the wild, and account state says nothing about certificate validity.",
     tags: ["crypto", "pki", "revocation"],
     isMindsetHeavy: false,
   },

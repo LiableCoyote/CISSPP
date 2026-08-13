@@ -11,7 +11,7 @@ import type { Profile, Quest } from "./schema";
  * is exactly the failure the quest backfill was added to fix, so treat it as
  * part of adding content rather than as an optimisation knob.
  */
-export const CONTENT_VERSION = 1;
+export const CONTENT_VERSION = 2;
 
 /**
  * Per-slot, not global. Each profile slot is a separate IndexedDB database, so
@@ -74,6 +74,50 @@ export async function syncSeedContent() {
   const newQuestions = ALL_QUESTIONS.filter((q) => !questionIds.has(q.id));
   if (newQuestions.length > 0) await db.questions.bulkAdd(newQuestions);
 
+  // Corrections, not just additions.
+  //
+  // This sync was add-only, keyed on the id being missing. A question whose
+  // wording or answer was fixed keeps its id, so the fix reached new installs
+  // and nobody else — every existing user kept the wrong version forever. A
+  // content audit that cannot ship its own corrections is decoration.
+  //
+  // Questions are safe to overwrite outright: the row holds no user state.
+  // Answers reference questionId from their own table and questionReviews keys
+  // by questionId, so neither is touched by replacing the text.
+  const corrected = ALL_QUESTIONS.filter((q) => questionIds.has(q.id));
+  if (corrected.length > 0) await db.questions.bulkPut(corrected);
+
+  // Cards and quests are different: their rows mix authored content with user
+  // progress, so only the authored fields may be refreshed.
+  const seedCards = new Map(buildFlashcardSeed().map((c) => [c.id, c]));
+  await db.flashcards
+    .where("source")
+    .equals("seed")
+    .modify((card) => {
+      const fresh = seedCards.get(card.id);
+      if (!fresh) return;
+      // Scheduling — ease, interval, reps, lapses, dueAt, lastReviewedAt — is
+      // deliberately absent here. Refreshing it would reset the deck.
+      card.front = fresh.front;
+      card.back = fresh.back;
+      card.domainId = fresh.domainId;
+      card.tags = fresh.tags;
+    });
+
+  const seedQuests = new Map(QUEST_SEEDS.map((q) => [q.id, q]));
+  await db.quests.toCollection().modify((quest) => {
+    const fresh = seedQuests.get(quest.id);
+    if (!fresh) return;
+    // completedAt and minutesLogged are the user's, and stay theirs.
+    quest.title = fresh.title;
+    quest.description = fresh.description;
+    quest.domainIds = fresh.domainIds;
+    quest.xp = fresh.xp;
+    quest.type = fresh.type;
+    quest.week = fresh.week;
+    quest.day = fresh.day;
+  });
+
   const resourceIds = new Set(await db.resources.toCollection().primaryKeys());
   const newResources = RESOURCES.filter((r) => !resourceIds.has(r.id)).map((r) => ({
     id: r.id,
@@ -82,10 +126,11 @@ export async function syncSeedContent() {
   }));
   if (newResources.length > 0) await db.resources.bulkAdd(newResources);
 
-  const total = newCards.length + newQuests.length + newQuestions.length + newResources.length;
+  const total =
+    newCards.length + newQuests.length + newQuestions.length + newResources.length + corrected.length;
   if (total > 0 && import.meta.env.DEV) {
     console.log(
-      `✅ Synced new content: ${newCards.length} cards, ${newQuests.length} quests, ${newQuestions.length} questions, ${newResources.length} resources`,
+      `✅ Synced content: +${newCards.length} cards, +${newQuests.length} quests, +${newQuestions.length} questions, +${newResources.length} resources, ${corrected.length} questions refreshed`,
     );
   }
 }

@@ -95,3 +95,75 @@ describe("syncSeedContent", () => {
     expect(await db.flashcards.get("user-1")).toBeDefined();
   });
 });
+
+describe("syncSeedContent — corrections reach existing users", () => {
+  // The sync was add-only, keyed on a missing id. A corrected question keeps
+  // its id, so before this every existing user kept the wrong version forever
+  // and the content audit shipped to nobody.
+  it("overwrites a stale question with the shipped one", async () => {
+    await syncSeedContent();
+    const target = ALL_QUESTIONS[0];
+    await db.questions.put({ ...target, prompt: "STALE WORDING", explanation: "stale" });
+
+    await syncSeedContent();
+
+    const after = await db.questions.get(target.id);
+    expect(after?.prompt).toBe(target.prompt);
+    expect(after?.explanation).toBe(target.explanation);
+  });
+
+  it("does not multiply rows when refreshing", async () => {
+    await syncSeedContent();
+    const before = await db.questions.count();
+    await syncSeedContent();
+    expect(await db.questions.count()).toBe(before);
+  });
+
+  // The other half of the contract: refreshing content must not reset progress.
+  it("refreshes card text while leaving its SRS schedule alone", async () => {
+    await syncSeedContent();
+    const card = (await db.flashcards.where("source").equals("seed").first())!;
+    await db.flashcards.update(card.id, {
+      front: "STALE FRONT",
+      ease: 1.9,
+      interval: 21,
+      reps: 5,
+      dueAt: "2099-01-01T00:00:00.000Z",
+    });
+
+    await syncSeedContent();
+
+    const after = await db.flashcards.get(card.id);
+    expect(after?.front).toBe(card.front);
+    // Scheduling is the user's, and stays theirs.
+    expect(after?.ease).toBe(1.9);
+    expect(after?.interval).toBe(21);
+    expect(after?.reps).toBe(5);
+    expect(after?.dueAt).toBe("2099-01-01T00:00:00.000Z");
+  });
+
+  it("leaves user-authored cards untouched", async () => {
+    await syncSeedContent();
+    const now = new Date().toISOString();
+    await db.flashcards.add({
+      id: "user-card-1",
+      front: "My own card",
+      back: "My own answer",
+      domainId: 1,
+      tags: [],
+      ease: 2.5,
+      interval: 0,
+      reps: 0,
+      lapses: 0,
+      dueAt: now,
+      lastReviewedAt: null,
+      createdAt: now,
+      source: "user",
+    });
+
+    await syncSeedContent();
+
+    const mine = await db.flashcards.get("user-card-1");
+    expect(mine?.front).toBe("My own card");
+  });
+});

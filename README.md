@@ -87,7 +87,10 @@ Because there's no backend, two things that look like social features aren't:
 
 New seed content added in an update — cards, quests, questions and resources —
 is backfilled into an existing database by id on next load, so your SRS
-progress, quiz history and streak survive upgrades.
+progress, quiz history and streak survive upgrades. **Corrections** land too:
+question text is refreshed outright (those rows hold no progress), while cards
+and quests have only their authored fields refreshed so scheduling and
+completion stay yours.
 
 The backfill is gated on `CONTENT_VERSION` in `src/db/seed.ts`, recorded per
 profile slot. **Bump it whenever you change seed content** — if you don't, the
@@ -176,12 +179,13 @@ that upstream range catches up.
 
 ### Tests
 
-437 tests over the pure logic: export/import and every rejection path, analytics
+467 tests over the pure logic: export/import and every rejection path, analytics
 and study signals, recommendations, miss remediation, campaign/date helpers, quiz scoring and
 question selection, question spaced repetition,
 confidence calibration, exam pacing, readiness weighting and projection,
 reminder scheduling and capability detection,
-failure reporting, storage durability and backup age, XP rewards, profile slots, quick-test generation, SM-2, XP
+failure reporting, storage durability and backup age,
+and the seeded content itself, XP rewards, profile slots, quick-test generation, SM-2, XP
 levels, ISO week keys, guarded storage, seed idempotency snapshots and the
 achievement engine. No jsdom, no component tests — Dexie runs on
 `fake-indexeddb`.
