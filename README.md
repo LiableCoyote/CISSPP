@@ -49,7 +49,7 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 ## Local development
 
 ```bash
-npm install --legacy-peer-deps
+npm install
 npm run dev        # http://localhost:5173
 npm run build      # production build to dist/
 npm run preview    # preview production build
@@ -177,9 +177,10 @@ script were ever simplified to plain `vite build`, typechecking would otherwise
 disappear from CI with no other signal.
 
 Node is pinned by `.nvmrc` and the `engines` field so local and CI can't drift.
-`--legacy-peer-deps` is required, not cosmetic: `vite-plugin-pwa@1` declares
-`vite ^3||^4||^5||^6||^7` while this project is on Vite 8. Retire the flag when
-that upstream range catches up.
+`--legacy-peer-deps` is **gone**: `vite-plugin-pwa@1.3.0` added `^8` to its peer
+range, so a plain `npm ci` resolves. If a future dependency needs the flag
+again, treat that as a real conflict to investigate rather than a switch to
+flip — masking one is how this one went unexamined for months.
 
 ### Tests
 
