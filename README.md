@@ -24,7 +24,7 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **Pacing** — median seconds a question against the real 72s exam budget, split
   by right and wrong, so fast-and-wrong shows up as the distinct problem it is
 - **Next Up recommendations** — ranks what to study next from your actual behaviour, plus signals for cramming, low-score runs, dormancy, and SRS backlog; miss patterns route to the right drill (mindset → vault, knowledge → domain, misread → pacing)
-- **Gamification** — XP, 10 level titles, daily streak with freeze, 29 achievements across 8 categories with Common/Rare/Epic/Legendary difficulty tiers (all 29 reachable)
+- **Gamification** — XP, 10 level titles, daily streak with freeze, 33 achievements across 8 categories with Common/Rare/Epic/Legendary difficulty tiers; a test asserts every badge has an unlock path and every path a badge
 - **Exam readiness** — mastery weighted by each domain's real exam weight, with
   its own uncertainty attached: untested and thinly-covered domains are named,
   and a trend line is only drawn when there's enough history to justify one
@@ -183,7 +183,7 @@ that upstream range catches up.
 
 ### Tests
 
-467 tests over the pure logic: export/import and every rejection path, analytics
+481 tests over the pure logic: export/import and every rejection path, analytics
 and study signals, recommendations, miss remediation, campaign/date helpers, quiz scoring and
 question selection, question spaced repetition,
 confidence calibration, exam pacing, readiness weighting and projection,

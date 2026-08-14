@@ -2,6 +2,8 @@ import { db } from "../../db/schema";
 import { ACHIEVEMENT_DEFS, type AchievementDef } from "../../data/achievements";
 import { pushToast } from "../../state/toast";
 import { xpToLevel } from "../../lib/xp";
+import { calibrationCurve } from "../../lib/calibration";
+import { readiness, coverageByDomain, PASS_MARK } from "../../lib/readiness";
 
 export type AchievementEvent =
   | { kind: "quest-complete"; questId: string; week: number; day: number }
@@ -11,6 +13,41 @@ export type AchievementEvent =
   | { kind: "streak"; streak: number }
   | { kind: "vault-quick-test"; tableId: string; scorePct: number }
   | { kind: "vault-order-win"; gameId: string };
+
+/**
+ * Every id the engine can ever hand to `tryUnlock`, grouped by the check that
+ * owns it.
+ *
+ * This exists because `tryUnlock` is a silent no-op for an unknown id: it looks
+ * the id up in DEF_BY_ID and returns false if absent. So a badge defined in the
+ * data with no call site here simply never unlocks, and nothing complains —
+ * which is exactly the state `bia-first` and `gap-closer` were once in.
+ *
+ * The checks below use these constants rather than repeating the strings, so
+ * the declaration cannot drift from the code that awards them. The test asserts
+ * both directions: no badge without a path, and no path without a badge.
+ *
+ * It proves an id is *wired*, not that its condition is reachable in practice —
+ * the per-achievement tests below are the evidence for the conditions.
+ */
+export const UNLOCK_IDS = {
+  streak: ["streak-7", "streak-14", "streak-28"],
+  levels: ["level-5", "level-7", "level-10"],
+  // Built by template as `week-${n}-clear`; listed so the guard can see them.
+  campaign: [
+    "week-1-clear", "week-2-clear", "week-3-clear", "week-4-clear",
+    "week-5-clear", "week-6-clear", "week-7-clear", "week-8-clear",
+  ],
+  milestones: ["first-blood", "day-1-quests", "bia-first", "vault-quiz-perfect"],
+  mindset: ["think-like-ciso", "no-technician", "calibrated"],
+  mastery: ["domain-master-any", "domain-master-d3", "gap-closer", "exam-ready"],
+  retry: ["gap-hunter", "no-repeat"],
+  boss: ["boss-1-pass", "boss-2-pass", "boss-3-pass"],
+  flashcards: ["flashcard-100", "flashcard-500", "full-deck-review"],
+} as const;
+
+/** Flattened, for the guard and for anything that needs the whole surface. */
+export const ALL_UNLOCK_IDS: readonly string[] = Object.values(UNLOCK_IDS).flat();
 
 const DEF_BY_ID = new Map(ACHIEVEMENT_DEFS.map((d) => [d.id, d]));
 
@@ -48,15 +85,15 @@ async function tryUnlock(id: string): Promise<boolean> {
 }
 
 async function checkStreak(streak: number) {
-  if (streak >= 7) await tryUnlock("streak-7");
-  if (streak >= 14) await tryUnlock("streak-14");
-  if (streak >= 28) await tryUnlock("streak-28");
+  if (streak >= 7) await tryUnlock(UNLOCK_IDS.streak[0]);
+  if (streak >= 14) await tryUnlock(UNLOCK_IDS.streak[1]);
+  if (streak >= 28) await tryUnlock(UNLOCK_IDS.streak[2]);
 }
 
 async function checkLevels(level: number) {
-  if (level >= 5) await tryUnlock("level-5");
-  if (level >= 7) await tryUnlock("level-7");
-  if (level >= 10) await tryUnlock("level-10");
+  if (level >= 5) await tryUnlock(UNLOCK_IDS.levels[0]);
+  if (level >= 7) await tryUnlock(UNLOCK_IDS.levels[1]);
+  if (level >= 10) await tryUnlock(UNLOCK_IDS.levels[2]);
 }
 
 async function checkWeekClear(week: number) {
@@ -64,41 +101,41 @@ async function checkWeekClear(week: number) {
   const weekQuests = await db.quests.where("week").equals(week).toArray();
   if (weekQuests.length === 0) return;
   const allDone = weekQuests.every((q) => !!q.completedAt);
-  if (allDone) await tryUnlock(`week-${week}-clear`);
+  if (allDone) await tryUnlock(UNLOCK_IDS.campaign[week - 1]);
 }
 
 async function checkDayOneQuests() {
   const d1 = await db.quests.where("week").equals(1).toArray();
   const day1 = d1.filter((q) => q.day === 1);
   if (day1.length > 0 && day1.every((q) => !!q.completedAt)) {
-    await tryUnlock("day-1-quests");
+    await tryUnlock(UNLOCK_IDS.milestones[1]);
   }
 }
 
 async function checkFirstBlood() {
   const count = await db.attempts.count();
-  if (count >= 1) await tryUnlock("first-blood");
+  if (count >= 1) await tryUnlock(UNLOCK_IDS.milestones[0]);
 }
 
 async function checkMindsetAchievements() {
   const p = await db.profile.get(1);
   if (!p) return;
-  if (p.mindsetChoicesCorrect >= 25) await tryUnlock("think-like-ciso");
+  if (p.mindsetChoicesCorrect >= 25) await tryUnlock(UNLOCK_IDS.mindset[0]);
 }
 
 async function checkNoTechnicianOnAttempt(attemptId: string) {
   const ans = await db.answers.where("attemptId").equals(attemptId).toArray();
   if (ans.length < 50) return;
   const mindsetMisses = ans.filter((a) => a.flaggedMindset).length;
-  if (mindsetMisses / ans.length < 0.1) await tryUnlock("no-technician");
+  if (mindsetMisses / ans.length < 0.1) await tryUnlock(UNLOCK_IDS.mindset[1]);
 }
 
 async function checkDomainMastery(attemptId: string) {
   const attempt = await db.attempts.get(attemptId);
   if (!attempt) return;
   if (attempt.mode !== "domain") return;
-  if (attempt.scorePct >= 85) await tryUnlock("domain-master-any");
-  if (attempt.domainId === 3 && attempt.scorePct >= 80) await tryUnlock("domain-master-d3");
+  if (attempt.scorePct >= 85) await tryUnlock(UNLOCK_IDS.mastery[0]);
+  if (attempt.domainId === 3 && attempt.scorePct >= 80) await tryUnlock(UNLOCK_IDS.mastery[1]);
 }
 
 const BOSS_2_PCT = 70;
@@ -129,21 +166,21 @@ async function checkBossFights(attemptId: string) {
   const ordinal = fullExams.findIndex((a) => a.id === attempt.id) + 1;
   if (ordinal < 1) return;
 
-  if (ordinal >= 1) await tryUnlock("boss-1-pass");
-  if (ordinal >= 2 && attempt.scorePct >= BOSS_2_PCT) await tryUnlock("boss-2-pass");
-  if (ordinal >= 3 && attempt.scorePct >= BOSS_3_PCT) await tryUnlock("boss-3-pass");
+  if (ordinal >= 1) await tryUnlock(UNLOCK_IDS.boss[0]);
+  if (ordinal >= 2 && attempt.scorePct >= BOSS_2_PCT) await tryUnlock(UNLOCK_IDS.boss[1]);
+  if (ordinal >= 3 && attempt.scorePct >= BOSS_3_PCT) await tryUnlock(UNLOCK_IDS.boss[2]);
 }
 
 async function checkFlashcardCounts(reviewedToday: number, totalDeck: number) {
-  if (reviewedToday >= 100) await tryUnlock("flashcard-100");
+  if (reviewedToday >= 100) await tryUnlock(UNLOCK_IDS.flashcards[0]);
   const all = await db.studyLog.toArray();
   const lifetime = all.reduce((s, d) => s + (d.flashcardsReviewed || 0), 0);
-  if (lifetime >= 500) await tryUnlock("flashcard-500");
-  if (totalDeck > 0 && reviewedToday >= totalDeck) await tryUnlock("full-deck-review");
+  if (lifetime >= 500) await tryUnlock(UNLOCK_IDS.flashcards[1]);
+  if (totalDeck > 0 && reviewedToday >= totalDeck) await tryUnlock(UNLOCK_IDS.flashcards[2]);
 }
 
 async function checkVaultQuickTest(scorePct: number) {
-  if (scorePct >= 100) await tryUnlock("vault-quiz-perfect");
+  if (scorePct >= 100) await tryUnlock(UNLOCK_IDS.milestones[3]);
 }
 
 const BIA_WINS_REQUIRED = 5;
@@ -152,7 +189,7 @@ const BIA_WINS_REQUIRED = 5;
 async function checkVaultOrderWin(gameId: string) {
   if (gameId !== "bcp-steps") return;
   const row = await db.vaultWins.get(gameId);
-  if ((row?.wins ?? 0) >= BIA_WINS_REQUIRED) await tryUnlock("bia-first");
+  if ((row?.wins ?? 0) >= BIA_WINS_REQUIRED) await tryUnlock(UNLOCK_IDS.milestones[2]);
 }
 
 const GAP_WEAK_PCT = 60;
@@ -187,7 +224,67 @@ async function checkGapCloser(attemptId: string) {
   const wasWeak = domainAttempts
     .slice(0, -1)
     .some((_, i) => avgOfFirst(i + 1) < GAP_WEAK_PCT);
-  if (wasWeak) await tryUnlock("gap-closer");
+  if (wasWeak) await tryUnlock(UNLOCK_IDS.mastery[2]);
+}
+
+/** Enough of a run that it represents clearing the queue, not one lucky retry. */
+const GAP_HUNTER_MIN_QUESTIONS = 10;
+/** Missed this many times before getting it right is a genuine turnaround. */
+const NO_REPEAT_MIN_MISSES = 2;
+
+async function checkGapHunter(attemptId: string) {
+  const attempt = await db.attempts.get(attemptId);
+  if (!attempt || attempt.mode !== "misses" || !attempt.finishedAt) return;
+  if (attempt.questionIds.length >= GAP_HUNTER_MIN_QUESTIONS) {
+    await tryUnlock(UNLOCK_IDS.retry[0]);
+  }
+}
+
+/**
+ * Rewards the turnaround rather than the streak: a question that beat you twice
+ * and then didn't. Reads timesMissed from the review row, which applyReview
+ * leaves untouched on a correct answer, so the historical count is still there
+ * when this runs.
+ */
+async function checkNoRepeat(attemptId: string) {
+  const answers = await db.answers.where("attemptId").equals(attemptId).toArray();
+  for (const a of answers) {
+    if (!a.correct) continue;
+    const review = await db.questionReviews.get(a.questionId);
+    if (review && review.timesMissed >= NO_REPEAT_MIN_MISSES) {
+      await tryUnlock(UNLOCK_IDS.retry[1]);
+      return;
+    }
+  }
+}
+
+/** calibrationCurve already refuses below its own sample floor, so the "real
+ *  sample" requirement is enforced there rather than duplicated here. */
+async function checkCalibrated() {
+  const answers = await db.answers.toArray();
+  const curve = calibrationCurve(answers);
+  if (!curve.insufficient && curve.verdict === "well-calibrated") {
+    await tryUnlock(UNLOCK_IDS.mindset[2]);
+  }
+}
+
+/**
+ * Gated on confidence as well as score, deliberately. Readiness reports "high"
+ * only when every domain is tested and covered, so this cannot be earned by
+ * drilling two domains to 90% and leaving the rest untouched — the same
+ * restraint the readiness feature applies to itself.
+ */
+async function checkExamReady() {
+  const [attempts, answers, questions] = await Promise.all([
+    db.attempts.toArray(),
+    db.answers.toArray(),
+    db.questions.toArray(),
+  ]);
+  const domainOf = new Map(questions.map((q) => [q.id, q.domainId as number]));
+  const r = readiness(attempts, coverageByDomain(answers, (id) => domainOf.get(id)));
+  if (r.scorePct >= PASS_MARK && r.confidence === "high") {
+    await tryUnlock(UNLOCK_IDS.mastery[3]);
+  }
 }
 
 /**
@@ -216,6 +313,10 @@ export async function checkAchievements(event: AchievementEvent): Promise<void> 
       await run("domain-mastery", () => checkDomainMastery(event.attemptId));
       await run("gap-closer", () => checkGapCloser(event.attemptId));
       await run("boss-fights", () => checkBossFights(event.attemptId));
+      await run("gap-hunter", () => checkGapHunter(event.attemptId));
+      await run("no-repeat", () => checkNoRepeat(event.attemptId));
+      await run("calibrated", () => checkCalibrated());
+      await run("exam-ready", () => checkExamReady());
       break;
     case "flashcard-review":
       await run("flashcard-counts", () =>
