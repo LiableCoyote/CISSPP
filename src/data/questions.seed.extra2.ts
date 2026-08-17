@@ -360,9 +360,9 @@ export const EXTRA_QUESTIONS_2: Question[] = [
     domainId: 6,
     prompt: "A security assessment finds that developers commit code directly to the main branch without code review. The PRIMARY security risk is:",
     options: [
-      "Slower deployment cycles overall",
+      "Slower deployment cycles, because every commit waits for the build queue to clear",
       "Unreviewed code increases the likelihood of security flaws and malicious code reaching production",
-      "Loss of the historical change record",
+      "Loss of the historical change record, as commits are no longer attributable",
       "Difficulty rolling back changes once they have been deployed to production environments by the release team",
     ],
     answerIndex: 1,

@@ -11,7 +11,7 @@ import type { Profile, Quest } from "./schema";
  * is exactly the failure the quest backfill was added to fix, so treat it as
  * part of adding content rather than as an optimisation knob.
  */
-export const CONTENT_VERSION = 2;
+export const CONTENT_VERSION = 3;
 
 /**
  * Per-slot, not global. Each profile slot is a separate IndexedDB database, so

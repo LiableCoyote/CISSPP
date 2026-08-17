@@ -90,17 +90,23 @@ describe("question bank — not gameable", () => {
   /**
    * The de-biasing pass is complete: all seven source files rewritten.
    *
-   *   longest-is-correct   95% -> 29%   (chance is 25%)
-   *   conspicuously longer 195 -> 24
+   *   longest-is-correct   95% -> 28%   (chance is 25%)
+   *   conspicuously longer 195 -> 24 -> 0
    *
-   * These are now real thresholds rather than ratchets, and the ceiling has a
-   * floor beside it. A bank where the correct answer is *never* the longest is
-   * just as gameable as one where it always is — "eliminate the longest" would
-   * work — and a ceiling alone would happily pass a perfectly inverted tell.
+   * These are real thresholds rather than ratchets, and the ceiling has a floor
+   * beside it. A bank where the correct answer is *never* the longest is just as
+   * gameable as one where it always is — "eliminate the longest" would work —
+   * and a ceiling alone would happily pass a perfectly inverted tell.
+   *
+   * The conspicuous count is 0 today. The ceiling is 5 rather than 0 because a
+   * genuinely long correct answer is occasionally the honest one, and a guard
+   * pinned to the current number turns every new question into a fight with the
+   * test. Five out of 246 is slack for that; a systematic return of the tell
+   * still fails.
    */
   const LONGEST_IS_CORRECT_CEILING = 0.45;
   const LONGEST_IS_CORRECT_FLOOR = 0.15;
-  const CONSPICUOUS_CEILING = 25;
+  const CONSPICUOUS_CEILING = 5;
 
   it("does not make the correct answer the longest option", () => {
     const longest = ALL_QUESTIONS.filter((q) => {
