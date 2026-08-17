@@ -9,8 +9,10 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **Not gameable** — an audit found the bank beatable with no CISSP knowledge:
   always picking B scored 79.7% and always picking the longest option scored
   95%, both past the pass mark. Options are now shuffled per attempt and every
-  distractor has been rewritten; both cheats score at chance (26% and 29%), and
-  `src/data/content.test.ts` fails the build if either tell returns
+  distractor has been rewritten; both cheats score at chance (24.8% and 25.0%
+  against a 25% baseline), and `src/data/content.test.ts` fails the build if
+  either tell returns — with a floor as well as a ceiling, because a bank where
+  the correct answer is never the longest is just as gameable
 - **179 high-yield flashcards** across all 8 domains with SM-2 spaced repetition, swipe gestures, and search/domain/tag filtering
 - **Memorization vault** — 12 drag-to-order sequences (BCP, NIST IR, OSI, RMF, forensics, IAAA, data lifecycle, change management, DR test rigor, SDLC, Kerberos, evidence lifecycle) and 12 reference tables
 - **Vault Quick Test** — 5 timed recall questions generated from any sequence's canonical order
@@ -43,7 +45,10 @@ A single-user, mobile-first, offline-capable PWA that turns an 8-week CISSP stud
 - **Fast to start** — 290KB entry chunk; the question bank, flashcard deck and
   vault tables load on demand, not before the first paint
 - **Accessible** — WCAG 2.1 AA: zero axe-core violations across all 13 routes; skip links, ARIA landmarks, keyboard-only operation, reduced-motion support
-- **Safe by default** — automatic snapshots before anything destructive, a confirmation step on import, a validated backup format, and a failed write that says so instead of celebrating
+- **Safe by default** — automatic snapshots before anything destructive, a confirmation step on import, a validated backup format, and a failed write that says so instead of celebrating; a failed daily backup is reported and retried on the next launch rather than silently marking the day done
+- **Nothing earned is lost** — an achievement check that fails on a transient
+  database error is queued and re-run at startup, so a badge is not lost because
+  the write happened to land at a bad moment
 - **Truly offline** — fonts are bundled, not fetched; the app makes no third-party request at any point
 
 ## Local development
@@ -184,7 +189,7 @@ flip — masking one is how this one went unexamined for months.
 
 ### Tests
 
-481 tests over the pure logic: export/import and every rejection path, analytics
+494 tests over the pure logic: export/import and every rejection path, analytics
 and study signals, recommendations, miss remediation, campaign/date helpers, quiz scoring and
 question selection, question spaced repetition,
 confidence calibration, exam pacing, readiness weighting and projection,
