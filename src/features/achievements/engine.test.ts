@@ -1,9 +1,16 @@
 import "fake-indexeddb/auto";
-import { describe, it, expect, beforeEach } from "vitest";
-import { db, type QuizAttempt } from "../../db/schema";
-import { checkAchievements, detectLevelUp, ALL_UNLOCK_IDS } from "./engine";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { db, type QuizAttempt, type Profile } from "../../db/schema";
+import {
+  checkAchievements,
+  detectLevelUp,
+  retryPendingChecks,
+  ALL_UNLOCK_IDS,
+  MAX_CHECK_ATTEMPTS,
+} from "./engine";
 import { ACHIEVEMENT_DEFS } from "../../data/achievements";
 import { LEVEL_XP_THRESHOLDS } from "../../lib/xp";
+import { useToast } from "../../state/toast";
 
 function fullExam(id: string, scorePct: number, minutesAgo: number): QuizAttempt {
   const at = new Date(Date.now() - minutesAgo * 60_000).toISOString();
@@ -33,6 +40,7 @@ beforeEach(async () => {
   await db.answers.clear();
   await db.questionReviews.clear();
   await db.questions.clear();
+  await db.pendingChecks.clear();
 });
 
 describe("boss badges", () => {
@@ -308,5 +316,200 @@ describe("exam-ready", () => {
     await db.attempts.add(missesRun("x3", 1));
     await checkAchievements({ kind: "quiz-complete", attemptId: "x3" });
     expect(await unlocked()).not.toContain("exam-ready");
+  });
+});
+
+/* ── the retry queue ─────────────────────────────────────────────────────── */
+
+/**
+ * Isolating each check stopped one failure killing the rest of the batch, but
+ * the failed check itself was only logged and nothing re-ran it. The triggering
+ * event is gone by then, so a badge earned during a transient IndexedDB error
+ * was never awarded and never would be.
+ *
+ * `db.attempts.count()` is called by exactly one check — first-blood — so
+ * rejecting it fails precisely that check and leaves the others alone. That is
+ * what makes the isolation assertion below meaningful rather than incidental.
+ */
+describe("failed achievement checks", () => {
+  const FIRST_BLOOD_XP = ACHIEVEMENT_DEFS.find((d) => d.id === "first-blood")!.xp;
+
+  const profileRow = (xp: number): Profile => ({
+    id: 1,
+    displayName: "T",
+    examDate: null,
+    dailyGoalMinutes: 60,
+    startDate: "2026-01-01",
+    xp,
+    streak: 0,
+    longestStreak: 0,
+    streakFreezesUsedThisWeek: 0,
+    streakWeekKey: "2026-W01",
+    lastActiveDate: null,
+    mindsetChoicesCorrect: 0,
+    technicianMisses: 0,
+    speedReaderMisses: 0,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  });
+
+  function breakFirstBlood() {
+    return vi
+      .spyOn(db.attempts, "count")
+      .mockRejectedValue(new Error("UnknownError: database connection lost"));
+  }
+
+  beforeEach(() => {
+    useToast.setState({ toasts: [] });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("queues the one that failed and still runs the ones after it", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    breakFirstBlood();
+
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+
+    const ids = await unlocked();
+    expect(ids).not.toContain("first-blood");
+    // boss-fights runs after first-blood in the same batch — the isolation the
+    // queue is built on top of, re-asserted here because it is easy to break.
+    expect(ids).toContain("boss-1-pass");
+
+    const queued = await db.pendingChecks.toArray();
+    expect(queued).toHaveLength(1);
+    expect(queued[0].label).toBe("first-blood");
+    expect(queued[0].attempts).toBe(1);
+    expect(queued[0].id).toBe("quiz-complete:first-blood:e1");
+  });
+
+  // Otherwise a check that fails on every launch grows the queue without bound.
+  it("collapses repeated failures of the same check onto one row", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    breakFirstBlood();
+
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+
+    const queued = await db.pendingChecks.toArray();
+    expect(queued).toHaveLength(1);
+    expect(queued[0].attempts).toBe(2);
+    expect(queued[0].firstFailedAt <= queued[0].lastFailedAt).toBe(true);
+  });
+
+  it("keeps separate rows for the same check failing on different events", async () => {
+    await db.attempts.bulkAdd([fullExam("e1", 92, 60), fullExam("e2", 88, 30)]);
+    breakFirstBlood();
+
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e2" });
+
+    expect(await db.pendingChecks.count()).toBe(2);
+  });
+
+  it("awards the badge on the next startup once the failure clears", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    const spy = breakFirstBlood();
+
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+    expect(await unlocked()).not.toContain("first-blood");
+
+    spy.mockRestore();
+    await retryPendingChecks();
+
+    expect(await unlocked()).toContain("first-blood");
+    expect(await db.pendingChecks.count()).toBe(0);
+  });
+
+  /**
+   * The property the whole design rests on. `tryUnlock` returns early on
+   * `alreadyUnlocked`, so replaying a check cannot pay out twice — asserted on
+   * the profile's XP rather than on the toast, because XP is the thing that
+   * would actually be wrong.
+   */
+  it("does not pay out twice when the badge was unlocked in the meantime", async () => {
+    await db.profile.put(profileRow(0));
+    await db.attempts.add(fullExam("e1", 92, 30));
+
+    const spy = breakFirstBlood();
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+    spy.mockRestore();
+
+    // The badge is earned by an ordinary later run while the row is still queued.
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+    const afterUnlock = (await db.profile.get(1))!.xp;
+    expect(afterUnlock).toBeGreaterThanOrEqual(FIRST_BLOOD_XP);
+
+    await retryPendingChecks();
+
+    expect((await db.profile.get(1))!.xp).toBe(afterUnlock);
+    expect((await unlocked()).filter((id) => id === "first-blood")).toHaveLength(1);
+    expect(await db.pendingChecks.count()).toBe(0);
+  });
+
+  // A rename or removal leaves rows nothing can resolve. Retrying them forever
+  // is the failure mode this avoids.
+  it("drops a queued check whose label no longer exists", async () => {
+    await db.pendingChecks.put({
+      id: "quiz-complete:check-from-an-older-build:e1",
+      label: "check-from-an-older-build",
+      event: { kind: "quiz-complete", attemptId: "e1" },
+      firstFailedAt: "2026-01-01T00:00:00.000Z",
+      lastFailedAt: "2026-01-01T00:00:00.000Z",
+      attempts: 1,
+    });
+
+    await expect(retryPendingChecks()).resolves.toBeUndefined();
+    expect(await db.pendingChecks.count()).toBe(0);
+  });
+
+  it("counts a failed retry rather than losing the row", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    breakFirstBlood();
+
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+    await retryPendingChecks();
+
+    const queued = await db.pendingChecks.toArray();
+    expect(queued).toHaveLength(1);
+    expect(queued[0].attempts).toBe(2);
+  });
+
+  it("gives up after the attempt ceiling, and says so", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    await db.pendingChecks.put({
+      id: "quiz-complete:first-blood:e1",
+      label: "first-blood",
+      event: { kind: "quiz-complete", attemptId: "e1" },
+      firstFailedAt: "2026-01-01T00:00:00.000Z",
+      lastFailedAt: "2026-01-01T00:00:00.000Z",
+      attempts: MAX_CHECK_ATTEMPTS - 1,
+    });
+    breakFirstBlood();
+
+    await retryPendingChecks();
+
+    expect(await db.pendingChecks.count()).toBe(0);
+    const toasts = useToast.getState().toasts;
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].variant).toBe("warn");
+    expect(toasts[0].title).toBe("Couldn't check for new achievements");
+  });
+
+  // Transient failures are not worth interrupting for: a retry is coming and
+  // there is nothing the user can do about it.
+  it("stays quiet while a retry is still coming", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    breakFirstBlood();
+
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+    await retryPendingChecks();
+
+    // Warnings only: the same batch legitimately unlocks boss-1-pass, and that
+    // toast is the feature working.
+    expect(useToast.getState().toasts.filter((t) => t.variant === "warn")).toHaveLength(0);
   });
 });

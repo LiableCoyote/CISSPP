@@ -9,6 +9,7 @@ import RouteErrorBoundary from "./components/RouteErrorBoundary";
 import UpdatePrompt from "./components/UpdatePrompt";
 import PomodoroFab from "./components/PomodoroFab";
 import { requestPersistence } from "./lib/storage";
+import { retryPendingChecks } from "./features/achievements/engine";
 
 const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage"));
 const CampaignPage = lazy(() => import("./features/plan/CampaignPage"));
@@ -91,6 +92,15 @@ function App() {
       // Best-effort and non-blocking, exactly like the snapshot above — it must
       // never delay first paint, and being refused is an ordinary outcome.
       .then(() => requestPersistence().catch(() => "unsupported" as const))
+      // Award anything an achievement check failed to award last time. Same
+      // discipline again: this must never delay first paint, and an empty queue
+      // is the normal case. No extra chunk cost — state/profile already pulls
+      // the engine into the entry bundle.
+      .then(() =>
+        retryPendingChecks().catch((err: unknown) =>
+          console.error("Retrying achievement checks:", err),
+        ),
+      )
       .catch((err: unknown) => {
         console.error("Startup failed:", err);
         setStartupError(err instanceof Error ? err.message : "Unknown error");

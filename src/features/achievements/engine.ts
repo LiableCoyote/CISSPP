@@ -1,6 +1,7 @@
-import { db } from "../../db/schema";
+import { db, type PendingCheck } from "../../db/schema";
 import { ACHIEVEMENT_DEFS, type AchievementDef } from "../../data/achievements";
 import { pushToast } from "../../state/toast";
+import { reportFailure } from "../../lib/failure";
 import { xpToLevel } from "../../lib/xp";
 import { calibrationCurve } from "../../lib/calibration";
 import { readiness, coverageByDomain, PASS_MARK } from "../../lib/readiness";
@@ -287,54 +288,194 @@ async function checkExamReady() {
   }
 }
 
+type Check = { label: string; fn: () => Promise<void> };
+
+/**
+ * The checks an event triggers, as data.
+ *
+ * Written as a table rather than inline `run(...)` calls because the retry path
+ * rebuilds the failed check from a stored event and has to get *the same*
+ * check. A second copy of this switch living next to the queue would drift the
+ * first time a check was added on one side only — and the symptom would be a
+ * retry that silently ran nothing.
+ *
+ * Labels are the stored identity of a check, so renaming one abandons its
+ * queued rows. That is the intended trade: a rename means the old check no
+ * longer exists, and `retryPendingChecks` drops rows it cannot resolve rather
+ * than keeping them forever.
+ */
+function checksFor(event: AchievementEvent): Check[] {
+  switch (event.kind) {
+    case "quest-complete":
+      return [
+        { label: "day-one-quests", fn: () => checkDayOneQuests() },
+        { label: "week-clear", fn: () => checkWeekClear(event.week) },
+      ];
+    case "quiz-complete":
+      return [
+        { label: "first-blood", fn: () => checkFirstBlood() },
+        { label: "mindset", fn: () => checkMindsetAchievements() },
+        { label: "no-technician", fn: () => checkNoTechnicianOnAttempt(event.attemptId) },
+        { label: "domain-mastery", fn: () => checkDomainMastery(event.attemptId) },
+        { label: "gap-closer", fn: () => checkGapCloser(event.attemptId) },
+        { label: "boss-fights", fn: () => checkBossFights(event.attemptId) },
+        { label: "gap-hunter", fn: () => checkGapHunter(event.attemptId) },
+        { label: "no-repeat", fn: () => checkNoRepeat(event.attemptId) },
+        { label: "calibrated", fn: () => checkCalibrated() },
+        { label: "exam-ready", fn: () => checkExamReady() },
+      ];
+    case "flashcard-review":
+      return [
+        {
+          label: "flashcard-counts",
+          fn: () => checkFlashcardCounts(event.reviewedToday, event.totalDeck),
+        },
+      ];
+    case "level-up":
+      return [{ label: "levels", fn: () => checkLevels(event.newLevel) }];
+    case "streak":
+      return [{ label: "streak", fn: () => checkStreak(event.streak) }];
+    case "vault-quick-test":
+      return [{ label: "vault-quick-test", fn: () => checkVaultQuickTest(event.scorePct) }];
+    case "vault-order-win":
+      return [{ label: "vault-order-win", fn: () => checkVaultOrderWin(event.gameId) }];
+    default:
+      // Unreachable for a well-formed event, but `retryPendingChecks` feeds
+      // this rows read back from IndexedDB, which an older or newer build may
+      // have written. An unknown kind resolves to no checks, and the row is
+      // dropped rather than retried forever.
+      return [];
+  }
+}
+
+/**
+ * Identifies the occasion a check ran on, so the same check failing twice for
+ * the same reason updates one queue row instead of adding a second.
+ *
+ * Deliberately made of the event's own fields rather than a timestamp: two
+ * separate quizzes should queue separately, but one quiz retried four times
+ * should not accumulate four rows.
+ */
+function eventKey(event: AchievementEvent): string {
+  switch (event.kind) {
+    case "quest-complete":
+      return event.questId;
+    case "quiz-complete":
+      return event.attemptId;
+    case "flashcard-review":
+      return `${event.reviewedToday}-${event.totalDeck}`;
+    case "level-up":
+      return `${event.previousLevel}-${event.newLevel}`;
+    case "streak":
+      return String(event.streak);
+    case "vault-quick-test":
+      return `${event.tableId}-${event.scorePct}`;
+    case "vault-order-win":
+      return event.gameId;
+    default:
+      return "unknown";
+  }
+}
+
+/**
+ * Records a failed check so startup can run it again.
+ *
+ * Guarded, and the guard is the point: the queue lives in the same database the
+ * check was reading when it threw, so whatever broke the check can break this
+ * write too. An unguarded failure here would escape `run` and take out every
+ * later check for the event — reintroducing the exact bug the isolation exists
+ * to prevent.
+ */
+async function enqueue(label: string, event: AchievementEvent): Promise<void> {
+  const id = `${event.kind}:${label}:${eventKey(event)}`;
+  const now = new Date().toISOString();
+  try {
+    const existing = await db.pendingChecks.get(id);
+    const row: PendingCheck = {
+      id,
+      label,
+      event,
+      firstFailedAt: existing?.firstFailedAt ?? now,
+      lastFailedAt: now,
+      attempts: (existing?.attempts ?? 0) + 1,
+    };
+    await db.pendingChecks.put(row);
+  } catch (err) {
+    console.error(`Could not queue achievement check "${label}" for retry`, err);
+  }
+}
+
 /**
  * Runs one check in isolation. A single wrapping try/catch around the whole
  * switch meant that if an early check threw, every later check for that event
- * was skipped permanently — nothing re-runs them.
+ * was skipped permanently.
+ *
+ * Isolation alone still lost the failed check: the triggering event has passed
+ * by the time anyone notices, so a badge earned during a transient IndexedDB
+ * error was never awarded and never would be. Now the failure is queued.
  */
-async function run(label: string, fn: () => Promise<void>): Promise<void> {
+async function run(check: Check, event: AchievementEvent): Promise<void> {
   try {
-    await fn();
+    await check.fn();
   } catch (err) {
-    console.error(`Achievement check "${label}" failed`, err);
+    console.error(`Achievement check "${check.label}" failed`, err);
+    await enqueue(check.label, event);
   }
 }
 
 export async function checkAchievements(event: AchievementEvent): Promise<void> {
-  switch (event.kind) {
-    case "quest-complete":
-      await run("day-one-quests", () => checkDayOneQuests());
-      await run("week-clear", () => checkWeekClear(event.week));
-      break;
-    case "quiz-complete":
-      await run("first-blood", () => checkFirstBlood());
-      await run("mindset", () => checkMindsetAchievements());
-      await run("no-technician", () => checkNoTechnicianOnAttempt(event.attemptId));
-      await run("domain-mastery", () => checkDomainMastery(event.attemptId));
-      await run("gap-closer", () => checkGapCloser(event.attemptId));
-      await run("boss-fights", () => checkBossFights(event.attemptId));
-      await run("gap-hunter", () => checkGapHunter(event.attemptId));
-      await run("no-repeat", () => checkNoRepeat(event.attemptId));
-      await run("calibrated", () => checkCalibrated());
-      await run("exam-ready", () => checkExamReady());
-      break;
-    case "flashcard-review":
-      await run("flashcard-counts", () =>
-        checkFlashcardCounts(event.reviewedToday, event.totalDeck),
-      );
-      break;
-    case "level-up":
-      await run("levels", () => checkLevels(event.newLevel));
-      break;
-    case "streak":
-      await run("streak", () => checkStreak(event.streak));
-      break;
-    case "vault-quick-test":
-      await run("vault-quick-test", () => checkVaultQuickTest(event.scorePct));
-      break;
-    case "vault-order-win":
-      await run("vault-order-win", () => checkVaultOrderWin(event.gameId));
-      break;
+  for (const check of checksFor(event)) await run(check, event);
+}
+
+/**
+ * Give up after this many failures. Without a ceiling a check that fails for a
+ * permanent reason — content removed, a row that will never exist — would be
+ * retried on every launch forever.
+ */
+export const MAX_CHECK_ATTEMPTS = 5;
+
+/**
+ * Re-runs queued checks. Called at startup, best-effort.
+ *
+ * Safe to run repeatedly because `tryUnlock` returns early on
+ * `alreadyUnlocked`, so no badge and no XP can be awarded twice. That is
+ * load-bearing for this whole design, and it has its own test rather than being
+ * taken on trust.
+ *
+ * Failures stay quiet while a retry is still coming — the user can do nothing
+ * useful with the news. Giving up permanently is different: a badge is gone for
+ * good at that point and redoing the activity is the only way to earn it, so
+ * that one is worth interrupting for.
+ */
+export async function retryPendingChecks(): Promise<void> {
+  const rows = await db.pendingChecks.orderBy("lastFailedAt").toArray();
+  for (const row of rows) {
+    const check = checksFor(row.event).find((c) => c.label === row.label);
+    if (!check) {
+      // The check was renamed or removed in a later build. Dead work, not a
+      // retry — dropping it is what keeps the queue from holding immortal rows.
+      await db.pendingChecks.delete(row.id);
+      continue;
+    }
+    try {
+      await check.fn();
+      await db.pendingChecks.delete(row.id);
+    } catch (err) {
+      console.error(`Achievement check "${row.label}" failed on retry`, err);
+      if (row.attempts + 1 >= MAX_CHECK_ATTEMPTS) {
+        await db.pendingChecks.delete(row.id);
+        reportFailure(
+          "check for new achievements",
+          err,
+          "A badge you earned may be missing. Doing that activity again will pick it up.",
+        );
+      } else {
+        await db.pendingChecks.update(row.id, {
+          attempts: row.attempts + 1,
+          lastFailedAt: new Date().toISOString(),
+        });
+      }
+    }
   }
 }
 

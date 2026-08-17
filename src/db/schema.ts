@@ -1,5 +1,9 @@
 import Dexie, { type Table } from "dexie";
 import { getItem } from "../lib/safeStorage";
+// Type-only, so it is erased at compile and the schema -> engine -> schema
+// cycle never exists at runtime. The alternative — a third module holding one
+// union — buys nothing here.
+import type { AchievementEvent } from "../features/achievements/engine";
 
 export type DomainId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type Priority = "HIGH" | "Medium";
@@ -188,6 +192,35 @@ export interface QuestionReview {
   firstMissedAt: string;
 }
 
+/**
+ * An achievement check that threw, kept so it can be run again.
+ *
+ * The engine isolates each check so one failure cannot kill the rest of the
+ * batch, but the failed check itself was only logged — and nothing re-ran it.
+ * The triggering event has already passed by then, so a badge earned during a
+ * transient IndexedDB error was never awarded and there was no second chance.
+ *
+ * Replay is possible because every `AchievementEvent` variant is a flat object
+ * of strings and numbers: the event survives a round trip through IndexedDB
+ * unchanged, so the check can be rebuilt exactly rather than approximated.
+ *
+ * Not part of the backup payload — see BACKUP_TABLES in lib/export.ts. This is
+ * one device's retry queue, not study history.
+ */
+export interface PendingCheck {
+  /**
+   * `${event.kind}:${label}:${eventKey}` — deterministic, so the same check
+   * failing repeatedly on the same event updates one row instead of growing
+   * the queue without bound.
+   */
+  id: string;
+  label: string;
+  event: AchievementEvent;
+  firstFailedAt: string;
+  lastFailedAt: string;
+  attempts: number;
+}
+
 // Resolved once at module load — switching profiles requires a page reload.
 // Must not throw: this runs before React mounts, so an unguarded storage error
 // would leave a blank page that ErrorBoundary can never catch.
@@ -208,6 +241,7 @@ class CissppDb extends Dexie {
   vaultWins!: Table<VaultWin, string>;
   snapshots!: Table<Snapshot, string>;
   questionReviews!: Table<QuestionReview, string>;
+  pendingChecks!: Table<PendingCheck, string>;
 
   constructor() {
     super("cisspp-" + _activeSlot);
@@ -315,6 +349,11 @@ class CissppDb extends Dexie {
         }
         if (rows.size > 0) await tx.table("questionReviews").bulkAdd([...rows.values()]);
       });
+    // v8: pendingChecks — achievement checks that threw, kept for a retry at
+    // next startup. New store only, so no upgrade block: there is nothing to
+    // backfill, because a failure that happened before this existed left no
+    // record anywhere to recover it from.
+    this.version(8).stores({ pendingChecks: "id, lastFailedAt" });
   }
 }
 
