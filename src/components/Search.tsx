@@ -62,6 +62,10 @@ export default function Search() {
   // A ref, not state: two rapid opens must not fire two fetches, and the guard
   // has to be readable synchronously within the same tick.
   const indexRequested = useRef(false);
+  // A failed load used to be logged and nothing else, which left the dialog
+  // showing "Loading search index…" forever and quietly served partial results
+  // as though they were complete. Both are worse than saying so.
+  const [indexFailed, setIndexFailed] = useState(false);
 
   // Resetting here rather than in an effect keyed on `open` keeps the state
   // change in the event that caused it.
@@ -76,11 +80,15 @@ export default function Search() {
     // load takes — and on a failure the Dexie-backed categories still work.
     if (!indexRequested.current) {
       indexRequested.current = true;
+      setIndexFailed(false);
       loadSearchIndex()
         .then(setIndex)
         .catch((err: unknown) => {
           console.error("Search index failed to load:", err);
+          // Cleared so reopening retries — the usual cause is a chunk that
+          // failed to fetch, which a second attempt often gets.
           indexRequested.current = false;
+          setIndexFailed(true);
         });
     }
   }, []);
@@ -277,11 +285,26 @@ export default function Search() {
               Type at least 2 characters. Navigate with ↑ / ↓, open with Enter.
             </div>
           )}
+          {/* Reported inline rather than as a toast: the dialog is already open
+              and focused, and this is the place the missing results would have
+              been. Shown above the hits, not instead of them, because the
+              Dexie-backed categories do still work and presenting a partial
+              list as a complete one is the actual harm. */}
+          {indexFailed && !index && (
+            <div
+              className="px-4 py-3 text-xs text-warn border-b border-border bg-warn/5"
+              role="alert"
+            >
+              Couldn't load the study material, so questions, vault tables and resources
+              aren't being searched. Quests, flashcards and notes still are. Close and
+              reopen search to try again.
+            </div>
+          )}
           {/* "No matches" would be a lie while the index is still in flight —
               questions, vault tables and resources genuinely cannot match yet. */}
           {query.trim().length >= 2 && hits.length === 0 && (
             <div className="p-6 text-center text-sm text-dim" aria-live="polite">
-              {index ? "No matches." : "Loading search index…"}
+              {index ? "No matches." : indexFailed ? "No matches in what could be searched." : "Loading search index…"}
             </div>
           )}
           {hits.map((h, i) => (

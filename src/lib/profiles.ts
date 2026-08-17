@@ -1,4 +1,5 @@
 import { getItem, setItem, setJSON } from "./safeStorage";
+import { reportFailure } from "./failure";
 
 export interface ProfileSlot {
   id: string;
@@ -99,10 +100,26 @@ export function deleteSlot(id: string): void {
   setJSON(SLOTS_KEY, slots);
   if ("indexedDB" in window) {
     const req = indexedDB.deleteDatabase("cisspp-" + id);
-    // Deletion is blocked while another tab holds the database open; say so
-    // rather than leaving an orphaned database behind silently.
-    req.onblocked = () =>
+    // The slot is already off the list by the time either of these can fire, so
+    // the UI has said "deleted" while the database is still on disk. That used
+    // to be a console line the user would never see — and this is a privacy
+    // question as much as a housekeeping one: someone deleting a profile is
+    // entitled to know its data is still there.
+    req.onblocked = () => {
       console.warn(`Database for ${id} is open elsewhere — close other tabs to remove it.`);
-    req.onerror = () => console.error(`Could not delete the database for ${id}.`);
+      reportFailure(
+        "remove that profile's data",
+        new Error("deleteDatabase blocked"),
+        "The profile is gone from the list, but its data is still in this browser because another tab has it open. Close other tabs and delete again.",
+      );
+    };
+    req.onerror = () => {
+      console.error(`Could not delete the database for ${id}.`);
+      reportFailure(
+        "remove that profile's data",
+        req.error ?? new Error("deleteDatabase failed"),
+        "The profile is gone from the list, but its data is still in this browser.",
+      );
+    };
   }
 }

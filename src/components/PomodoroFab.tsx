@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { db } from "../db/schema";
 import { format } from "date-fns";
+import { reportFailure } from "../lib/failure";
 
 type Phase = "idle" | "focus" | "break";
 
@@ -34,21 +35,29 @@ export default function PomodoroFab() {
   const finishPhase = useCallback(async () => {
     if ("vibrate" in navigator) navigator.vibrate([30, 50, 30]);
     if (phase === "focus") {
-      const today = format(new Date(), "yyyy-MM-dd");
-      const existing = await db.studyLog.get(today);
-      if (existing) {
-        await db.studyLog.update(today, {
-          minutes: existing.minutes + 25,
-          sessions: existing.sessions + 1,
-        });
-      } else {
-        await db.studyLog.add({
-          date: today,
-          minutes: 25,
-          sessions: 1,
-          questsCompleted: 0,
-          flashcardsReviewed: 0,
-        });
+      try {
+        const today = format(new Date(), "yyyy-MM-dd");
+        const existing = await db.studyLog.get(today);
+        if (existing) {
+          await db.studyLog.update(today, {
+            minutes: existing.minutes + 25,
+            sessions: existing.sessions + 1,
+          });
+        } else {
+          await db.studyLog.add({
+            date: today,
+            minutes: 25,
+            sessions: 1,
+            questsCompleted: 0,
+            flashcardsReviewed: 0,
+          });
+        }
+      } catch (err) {
+        // A failed write used to reject out of this function, which both lost
+        // the session silently and skipped the phase change below — leaving the
+        // timer stuck at 0:00 in "focus". The 25 minutes happened whether or not
+        // the write did, so report it and carry on to the break either way.
+        reportFailure("log that focus session", err, "The 25 minutes weren't added to today's study time.");
       }
       notify("Focus session complete", "Take a 5-minute break.");
       setPhase("break");
@@ -66,8 +75,10 @@ export default function PomodoroFab() {
       setSeconds((s) => {
         if (s <= 1) {
           clearInterval(timer);
-          // Floating async call — without a catch, a failed studyLog write or a
-          // Notification throw becomes an unhandled rejection nothing can see.
+          // Floating async call. The known failure — the studyLog write — is
+          // now handled and reported inside finishPhase; this stays as the
+          // backstop so anything unforeseen is still not an invisible
+          // unhandled rejection.
           finishPhase().catch((err) => console.error("Pomodoro phase failed:", err));
           return 0;
         }

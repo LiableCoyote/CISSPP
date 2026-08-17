@@ -1,7 +1,27 @@
 import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { db, type Profile } from "../db/schema";
-import { createSnapshot, createSnapshotOrThrow, listSnapshots } from "./snapshots";
+import { createSnapshotOrThrow, listSnapshots, maybeDailySnapshot } from "./snapshots";
+import { getItem, setItem } from "./safeStorage";
+
+/**
+ * These tests run in the node environment, where there is no `window`, so
+ * safeStorage correctly degrades to a no-op and the daily key never persists.
+ * Mocking the module rather than faking a `window` global keeps Dexie and
+ * fake-indexeddb seeing the environment they actually expect.
+ */
+vi.mock("./safeStorage", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./safeStorage")>();
+  const mem = new Map<string, string>();
+  return {
+    ...actual,
+    getItem: (key: string) => mem.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      mem.set(key, value);
+      return true;
+    },
+  };
+});
 import * as exportModule from "./export";
 
 function profile(): Profile {
@@ -76,9 +96,52 @@ describe("createSnapshotOrThrow", () => {
   });
 });
 
-describe("createSnapshot (best-effort)", () => {
-  it("returns null rather than throwing, for background use", async () => {
-    vi.spyOn(exportModule, "exportData").mockRejectedValue(new Error("nope"));
-    await expect(createSnapshot("daily")).resolves.toBeNull();
+/**
+ * The daily snapshot used to go through a best-effort wrapper that logged the
+ * failure and returned null. That helper is gone: it was wrong twice over — the
+ * user was never told their automatic backups had stopped, and the day was
+ * marked done anyway, so the failure was not even retried on the next launch.
+ */
+describe("maybeDailySnapshot", () => {
+  const key = "cisspp-last-snapshot-day-default";
+
+  beforeEach(() => {
+    setItem(key, "");
+  });
+
+  it("takes one snapshot and marks the day", async () => {
+    await maybeDailySnapshot();
+    expect(await db.snapshots.count()).toBe(1);
+    expect(getItem(key)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("does not take a second one the same day", async () => {
+    await maybeDailySnapshot();
+    await maybeDailySnapshot();
+    expect(await db.snapshots.count()).toBe(1);
+  });
+
+  it("propagates a failure so the caller can report it", async () => {
+    vi.spyOn(exportModule, "exportData").mockRejectedValue(new Error("QuotaExceededError"));
+    await expect(maybeDailySnapshot()).rejects.toThrow(/quota/i);
+  });
+
+  // The second half of the same defect: a failed snapshot that still marks the
+  // day means no backup today and no retry either.
+  it("leaves the day unmarked when it fails, so the next launch tries again", async () => {
+    const spy = vi.spyOn(exportModule, "exportData").mockRejectedValue(new Error("nope"));
+    await expect(maybeDailySnapshot()).rejects.toThrow();
+    expect(getItem(key)).toBe("");
+
+    spy.mockRestore();
+    await maybeDailySnapshot();
+    expect(await db.snapshots.count()).toBe(1);
+  });
+
+  it("does nothing on a fresh install with no profile", async () => {
+    await db.profile.clear();
+    await maybeDailySnapshot();
+    expect(await db.snapshots.count()).toBe(0);
+    expect(getItem(key)).toBe("");
   });
 });

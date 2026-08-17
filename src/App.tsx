@@ -10,6 +10,7 @@ import UpdatePrompt from "./components/UpdatePrompt";
 import PomodoroFab from "./components/PomodoroFab";
 import { requestPersistence } from "./lib/storage";
 import { retryPendingChecks } from "./features/achievements/engine";
+import { reportFailure } from "./lib/failure";
 
 const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage"));
 const CampaignPage = lazy(() => import("./features/plan/CampaignPage"));
@@ -86,8 +87,21 @@ function App() {
     // sees a rejected promise.
     initializeDb()
       .then(() => initProfile())
-      // Best-effort and non-blocking: a snapshot must never delay startup.
-      .then(() => maybeDailySnapshot().catch((err) => console.error("Daily snapshot:", err)))
+      // Best-effort and non-blocking: a snapshot must never delay startup. But
+      // best-effort is not the same as unreported — the snapshot is what makes
+      // an accidental import or reset recoverable, and a user who believes they
+      // have a safety net that isn't there is worse off than one who knows.
+      // Reported here rather than inside createSnapshot so the callers that
+      // handle their own failures (createSnapshotOrThrow) are unaffected.
+      .then(() =>
+        maybeDailySnapshot().catch((err: unknown) =>
+          reportFailure(
+            "save today's backup",
+            err,
+            "Automatic backups aren't running. Export from Settings to be safe.",
+          ),
+        ),
+      )
       // Ask the browser to stop treating months of study history as disposable.
       // Best-effort and non-blocking, exactly like the snapshot above — it must
       // never delay first paint, and being refused is an ordinary outcome.

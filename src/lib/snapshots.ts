@@ -53,19 +53,6 @@ export async function createSnapshotOrThrow(reason: Snapshot["reason"]): Promise
   return snapshot;
 }
 
-/**
- * Best-effort variant for background work (the daily snapshot), where failing
- * should not interrupt the user. Never use this to guard a destructive action.
- */
-export async function createSnapshot(reason: Snapshot["reason"]): Promise<Snapshot | null> {
-  try {
-    return await createSnapshotOrThrow(reason);
-  } catch (err) {
-    console.error("Snapshot failed:", err);
-    return null;
-  }
-}
-
 export async function listSnapshots(): Promise<Snapshot[]> {
   return db.snapshots.orderBy("createdAt").reverse().toArray();
 }
@@ -79,13 +66,22 @@ export async function restoreSnapshot(id: string): Promise<void> {
   await importData(snap.payload);
 }
 
-/** Takes at most one snapshot per day, on first launch. */
+/**
+ * Takes at most one snapshot per day, on first launch.
+ *
+ * Throws on failure, and the caller reports it. This used to go through a
+ * best-effort wrapper that logged and returned null, which was wrong twice
+ * over: the user was never told their automatic backups had stopped, and the
+ * day was marked done regardless — so the failure was not even retried on the
+ * next launch. Now a failed snapshot leaves the day unmarked and gets another
+ * attempt.
+ */
 export async function maybeDailySnapshot(): Promise<void> {
   const today = format(new Date(), "yyyy-MM-dd");
   const key = lastDailyKey();
   if (getItem(key) === today) return;
   // Nothing to protect on a fresh install.
   if ((await db.profile.count()) === 0) return;
-  await createSnapshot("daily");
+  await createSnapshotOrThrow("daily");
   setItem(key, today);
 }
