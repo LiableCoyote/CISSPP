@@ -29,7 +29,7 @@ export default function QuickTestMode({
   const [secondsLeft, setSecondsLeft] = useState(QUICK_TEST_SECONDS);
   const [done, setDone] = useState(false);
   const reportedRef = useRef(false);
-  const updateProfile = useProfile((s) => s.updateProfile);
+  const addXp = useProfile((s) => s.addXp);
   const refreshProfile = useProfile((s) => s.refreshProfile);
 
   const q = questions[index];
@@ -69,7 +69,7 @@ export default function QuickTestMode({
         if (p) {
           const xpGain = quickTestXp(scorePct);
           const patch = await logStudySession(p, { minutes: Math.max(1, questions.length / 2) });
-          await updateProfile({ xp: p.xp + xpGain, ...patch });
+          await addXp(xpGain, patch);
         }
         await checkAchievements({ kind: "vault-quick-test", tableId: game.id, scorePct });
 
@@ -97,7 +97,7 @@ export default function QuickTestMode({
         await refreshProfile();
       }
     })();
-  }, [done, scorePct, correctCount, questions.length, game.id, game.title, updateProfile, refreshProfile]);
+  }, [done, scorePct, correctCount, questions.length, game.id, game.title, addXp, refreshProfile]);
 
   const pick = (i: number) => {
     if (answered) return;

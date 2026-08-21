@@ -1,8 +1,16 @@
 import "fake-indexeddb/auto";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { format, subDays } from "date-fns";
 import { db, type Profile } from "../db/schema";
-import { logStudySession } from "./session";
+import { logStudySession, applyStudySession } from "./session";
+import { publishLastActive } from "./reminders";
+
+// The Cache API is absent in the node environment, so the real function returns
+// early and asserting on its effect is impossible. Mocking it is the only way to
+// see *whether it was called* — which is the property that matters here.
+vi.mock("./reminders", () => ({
+  publishLastActive: vi.fn(async () => {}),
+}));
 
 const today = () => format(new Date(), "yyyy-MM-dd");
 const yesterday = () => format(subDays(new Date(), 1), "yyyy-MM-dd");
@@ -30,6 +38,45 @@ function profile(over: Partial<Profile> = {}): Profile {
 
 beforeEach(async () => {
   await db.studyLog.clear();
+  vi.mocked(publishLastActive).mockClear();
+});
+
+/**
+ * The split that makes an atomic award possible.
+ *
+ * `publishLastActive` is a Cache API write, and a Dexie transaction does not
+ * survive a non-Dexie await — so as long as it sat inside the logging helper,
+ * no award could wrap the claim and the credit in one transaction. Moving it to
+ * the wrapper is load-bearing rather than tidying, and these two assertions are
+ * what keep it from drifting back.
+ */
+describe("applyStudySession — the transaction-safe half", () => {
+  it("writes the day's row and returns the streak patch", async () => {
+    const patch = await applyStudySession(profile({ lastActiveDate: yesterday(), streak: 3 }), {
+      minutes: 25,
+    });
+    expect((await db.studyLog.get(today()))?.minutes).toBe(25);
+    expect(patch.streak).toBe(4);
+  });
+
+  it("touches nothing outside Dexie", async () => {
+    await applyStudySession(profile(), { minutes: 25 });
+    expect(publishLastActive).not.toHaveBeenCalled();
+  });
+
+  it("and the wrapper still publishes, so the worker's reminder state stays current", async () => {
+    await logStudySession(profile(), { minutes: 25 });
+    expect(publishLastActive).toHaveBeenCalledWith(today());
+  });
+
+  // It used to publish before the already-counted-today early return, so a
+  // second session on the same day still refreshed the reminder state.
+  it("publishes on a second session the same day too", async () => {
+    const p = profile({ lastActiveDate: today() });
+    await logStudySession(p, { minutes: 10 });
+    await logStudySession(p, { minutes: 10 });
+    expect(publishLastActive).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("logStudySession — the study log", () => {

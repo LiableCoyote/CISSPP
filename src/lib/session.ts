@@ -23,6 +23,31 @@ export async function logStudySession(
   profile: Profile,
   entry: SessionLog,
 ): Promise<Partial<Profile>> {
+  const patch = await applyStudySession(profile, entry);
+  // Outside applyStudySession because this is a Cache API write, and a Dexie
+  // transaction does not survive a non-Dexie await. Keeping it here is what
+  // lets the award paths call applyStudySession inside a transaction.
+  await publishLastActive(format(new Date(), "yyyy-MM-dd"));
+  return patch;
+}
+
+/**
+ * The Dexie half of the above: writes the day's row and returns the streak
+ * patch, touching nothing but IndexedDB.
+ *
+ * Split out so an award can be atomic. The quiz and quest handlers mark
+ * themselves claimed before crediting anything, and without a transaction
+ * around the whole sequence a mid-way failure left the user marked done with
+ * nothing awarded and no way to retry.
+ *
+ * Callers that use this directly own the `publishLastActive` call — the service
+ * worker's reminder state still needs updating, it just cannot happen inside
+ * the transaction.
+ */
+export async function applyStudySession(
+  profile: Profile,
+  entry: SessionLog,
+): Promise<Partial<Profile>> {
   const today = format(new Date(), "yyyy-MM-dd");
   const minutes = Math.max(1, Math.round(entry.minutes));
 
@@ -43,11 +68,6 @@ export async function logStudySession(
       flashcardsReviewed: entry.flashcardsReviewed ?? 0,
     });
   }
-
-  // Publish for the service worker before the early return: a second session on
-  // the same day still needs the reminder state to be current, and the streak
-  // being already advanced says nothing about whether the cache was written.
-  await publishLastActive(today);
 
   // Already counted today — nothing to advance.
   if (profile.lastActiveDate === today) return {};

@@ -17,9 +17,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Deploy is gated on CI. There is no `main` on the remote, so a push to the
-  # working branch goes straight to users — this gate is the only thing between
-  # a broken commit and production.
+  # Deploy is gated on CI, for both branches above. `main` now exists as a
+  # review baseline, but the working branch is still the default and still
+  # deploys straight to users on push — so this gate remains the only thing
+  # between a broken commit and production, not a formality that a PR review
+  # would catch first.
   ci:
     uses: ./.github/workflows/ci.yml
 
