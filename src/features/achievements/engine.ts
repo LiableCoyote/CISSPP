@@ -349,6 +349,15 @@ function checksFor(event: AchievementEvent): Check[] {
 }
 
 /**
+ * The check labels an event will run, for the guard that keeps a real check
+ * from claiming the reserved batch label. Exported rather than `checksFor`
+ * itself so the closures over event data stay internal.
+ */
+export function labelsFor(event: AchievementEvent): string[] {
+  return checksFor(event).map((c) => c.label);
+}
+
+/**
  * Identifies the occasion a check ran on, so the same check failing twice for
  * the same reason updates one queue row instead of adding a second.
  *
@@ -423,8 +432,51 @@ async function run(check: Check, event: AchievementEvent): Promise<void> {
   }
 }
 
+/**
+ * Reserved label meaning "this whole event's batch may not have finished".
+ *
+ * Not a real check — `checksFor` never returns it, and a test asserts no check
+ * ever claims it, because a collision would make a genuine failure look like an
+ * unfinished batch.
+ */
+export const BATCH_LABEL = "*batch*";
+
 export async function checkAchievements(event: AchievementEvent): Promise<void> {
+  // Written before anything runs, deleted after everything has.
+  //
+  // The per-check rows recover a check that *threw*. They cannot recover a
+  // batch that never ran: close the tab or lose the page mid-award and nothing
+  // anywhere records that the event happened at all, so there is nothing to
+  // replay and the badge is gone. This row is that record.
+  //
+  // Guarded like enqueue, and for the same reason — if the marker cannot be
+  // written, the checks should still run rather than the whole event failing on
+  // its bookkeeping.
+  const batchId = `${event.kind}:${BATCH_LABEL}:${eventKey(event)}`;
+  try {
+    const existing = await db.pendingChecks.get(batchId);
+    const now = new Date().toISOString();
+    await db.pendingChecks.put({
+      id: batchId,
+      label: BATCH_LABEL,
+      event,
+      firstFailedAt: existing?.firstFailedAt ?? now,
+      lastFailedAt: now,
+      attempts: existing?.attempts ?? 0,
+    });
+  } catch (err) {
+    console.error("Could not mark the achievement batch as started", err);
+  }
+
   for (const check of checksFor(event)) await run(check, event);
+
+  // Reaching here means every check was given its turn. Any that failed left
+  // its own row behind, so dropping the marker loses nothing.
+  try {
+    await db.pendingChecks.delete(batchId);
+  } catch (err) {
+    console.error("Could not clear the achievement batch marker", err);
+  }
 }
 
 /**
@@ -449,7 +501,62 @@ export const MAX_CHECK_ATTEMPTS = 5;
  */
 export async function retryPendingChecks(): Promise<void> {
   const rows = await db.pendingChecks.orderBy("lastFailedAt").toArray();
-  for (const row of rows) {
+
+  // Batch rows first. A batch row means the event's checks may never have run
+  // at all, so replaying the whole batch subsumes any single-check row for the
+  // same event — running those afterwards would just repeat work that was only
+  // moments ago done.
+  const batches = rows.filter((r) => r.label === BATCH_LABEL);
+  const singles = rows.filter((r) => r.label !== BATCH_LABEL);
+  const eventOf = (r: PendingCheck) => `${r.event.kind}|${eventKey(r.event)}`;
+  const replayed = new Set<string>();
+
+  for (const row of batches) {
+    if (checksFor(row.event).length === 0) {
+      await db.pendingChecks.delete(row.id);
+      continue;
+    }
+
+    // The counter is bumped *before* the replay rather than after a failure,
+    // because checkAchievements swallows individual check failures and so never
+    // reports whether the batch achieved anything. What it cannot swallow is a
+    // marker that keeps coming back: if the database is broken badly enough
+    // that the clear-down fails too, this is what eventually stops the row
+    // replaying on every launch forever.
+    if (row.attempts + 1 >= MAX_CHECK_ATTEMPTS) {
+      await db.pendingChecks.delete(row.id);
+      reportFailure(
+        "check for new achievements",
+        new Error(`achievement batch for ${row.event.kind} gave up after ${row.attempts} attempts`),
+        "A badge you earned may be missing. Doing that activity again will pick it up.",
+      );
+      continue;
+    }
+    await db.pendingChecks.update(row.id, {
+      attempts: row.attempts + 1,
+      lastFailedAt: new Date().toISOString(),
+    });
+
+    // Clear this event's single-check rows *before* replaying, not after. The
+    // replay re-runs every check, so they are redundant — but a check that
+    // fails again writes to the same id, and cleaning up afterwards would
+    // delete that fresh record instead of the stale one.
+    replayed.add(eventOf(row));
+    for (const s of singles) {
+      if (eventOf(s) === eventOf(row)) await db.pendingChecks.delete(s.id);
+    }
+
+    // Through checkAchievements rather than the checks directly, so a check
+    // that fails during the replay queues itself exactly as it would have first
+    // time round, and the marker is rewritten and cleared by the code that owns
+    // it. It preserves the attempts count bumped above.
+    await checkAchievements(row.event);
+  }
+
+  for (const row of singles) {
+    // Already cleared above, as part of its batch replay.
+    if (replayed.has(eventOf(row))) continue;
+
     const check = checksFor(row.event).find((c) => c.label === row.label);
     if (!check) {
       // The check was renamed or removed in a later build. Dead work, not a
