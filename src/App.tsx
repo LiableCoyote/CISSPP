@@ -8,6 +8,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import RouteErrorBoundary from "./components/RouteErrorBoundary";
 import UpdatePrompt from "./components/UpdatePrompt";
 import PomodoroFab from "./components/PomodoroFab";
+import Toast from "./components/Toast";
 import { requestPersistence } from "./lib/storage";
 import { retryPendingChecks } from "./features/achievements/engine";
 import { reportFailure } from "./lib/failure";
@@ -127,6 +128,13 @@ function App() {
   return (
     <ErrorBoundary>
       <UpdatePrompt />
+      {/* One host, outside the router, so every route has it.
+          It used to live in Layout — which the two immersive routes,
+          /quiz/session and /flashcards/review, deliberately render outside. So
+          every toast pushed from a quiz or a flashcard session went nowhere,
+          including the failure reports for the most consequential writes in the
+          app. Found while checking that a failed answer write says so. */}
+      <Toast />
       <HashRouter>
         <Routes>
           {/* Immersive routes — no layout chrome */}
