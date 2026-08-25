@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { db, type Question, type QuizAttempt, type QuizAnswer } from "../../db/schema";
 import { ALL_QUESTIONS } from "../../data/questions.seed";
-import { dueReviews, newReview, applyReview, gradeFromOutcome } from "../../lib/questionSrs";
+import { dueReviews } from "../../lib/questionSrs";
+import { recordAnswer, finalizeAttempt } from "../../lib/quizWrites";
+import { reportFailure } from "../../lib/failure";
 import { isSpeedReader, isTechnicianAnswer, getSpeedReaderNudge, getTechnicianNudge } from "./detectors";
 import { useProfile } from "../../state/profile";
 import {
@@ -10,7 +12,6 @@ import {
   scoreQuiz,
   didPass,
   targetScorePct,
-  cisoCounterPatch,
   describeMode,
   optionOrder,
   MODE_LIMITS,
@@ -70,7 +71,17 @@ export default function QuizSessionPage() {
 
   // Declared ahead of the effects that call it — it was previously a const arrow
   // defined ~100 lines below the effect referencing it.
+  // Two callers race for this — the last question's "Finish", and the clock
+  // reaching zero — and the timeout effect below depends on `finalize`, which
+  // React rebuilds whenever `answers` changes, so it can fire twice on its own.
+  // The ref stops the second pass before it starts; finalizeAttempt is
+  // idempotent as well, because a ref does not survive a remount.
+  const finalizing = useRef(false);
+
   const finalize = useCallback(async () => {
+    if (finalizing.current) return;
+    finalizing.current = true;
+
     const finishedAt = new Date();
     const totalSeconds = Math.round((finishedAt.getTime() - startedAt.getTime()) / 1000);
     const { score, scorePct } = scoreQuiz(answers, questions.length);
@@ -87,7 +98,20 @@ export default function QuizSessionPage() {
       passed: didPass(scorePct, mode),
       targetScorePct: targetScorePct(mode),
     };
-    await db.attempts.add(attempt);
+
+    try {
+      await finalizeAttempt(attempt);
+    } catch (err) {
+      // Released, so the user is not stranded: without this a failed write left
+      // a timed-out exam sitting at 0:00 with nothing said and no way forward.
+      finalizing.current = false;
+      reportFailure(
+        "save your quiz result",
+        err,
+        "The attempt wasn't stored. Try finishing again.",
+      );
+      return;
+    }
     navigate(`/quiz/review/${attemptId}`);
   }, [answers, attemptId, domainId, mode, navigate, questions, startedAt]);
 
@@ -97,7 +121,11 @@ export default function QuizSessionPage() {
   }, []);
 
   useEffect(() => {
-    if (timeLeft === 0) void finalize();
+    // finalize() reports its own failures, but an explicit catch keeps a
+    // floating rejection from escaping if anything above the try ever throws.
+    if (timeLeft === 0) {
+      finalize().catch((err: unknown) => console.error("Finalizing the attempt:", err));
+    }
   }, [timeLeft, finalize]);
 
   // Refs and focus only — the per-question state reset moved into next(), so
@@ -176,36 +204,25 @@ export default function QuizSessionPage() {
       missCategory: null,
       confidence,
     };
-    setAnswers((a) => [...a, answer]);
-    await db.answers.add(answer);
 
-    // Question SRS. A first miss earns a row due immediately; every later
-    // encounter — right or wrong — reschedules through SM-2, so a question
-    // answered correctly twice drifts out of the queue on its own and a repeat
-    // miss comes back tomorrow rather than in the same sitting.
-    //
-    // A correct answer on a question that was never missed creates nothing:
-    // the queue is for gaps, not for everything ever seen.
-    const review = await db.questionReviews.get(q.id);
-    if (review) {
-      const grade = gradeFromOutcome(correct, timeTakenMs, confidence);
-      await db.questionReviews.put(applyReview(review, grade));
-    } else if (!correct) {
-      await db.questionReviews.put(newReview(q.id, q.domainId));
+    // Write first, then touch state. The other order is what let a failed write
+    // pass unnoticed and, on the retry it invited, count the same answer twice
+    // in the score.
+    try {
+      await recordAnswer(answer, q);
+    } catch (err) {
+      reportFailure(
+        "save that answer",
+        err,
+        "Nothing was recorded for this question — submit it again to retry.",
+      );
+      return;
     }
 
-    // Update CISO-thinking counters on the profile row. Read-modify-write on the
-    // DB directly so rapid-fire submits don't race against stale closures.
-    const fresh = await db.profile.get(1);
-    if (fresh) {
-      const patch = cisoCounterPatch(fresh, {
-        isMindsetHeavy: !!q.isMindsetHeavy,
-        correct,
-        technician: tech,
-        speedy: speed,
-      });
-      if (Object.keys(patch).length > 0) await db.profile.update(1, patch);
-    }
+    // De-duplicated by id as well as being an idempotent write: this is the
+    // line that actually keeps the score honest, since finalize() totals this
+    // array rather than the stored rows.
+    setAnswers((a) => [...a.filter((x) => x.id !== answer.id), answer]);
 
     // Nudge on wrong answers only
     if (!correct) {

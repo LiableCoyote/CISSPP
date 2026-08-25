@@ -4,7 +4,6 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import Onboarding from "./Onboarding";
 import Search from "../Search";
-import Toast from "../Toast";
 import LevelUpModal from "../gamification/LevelUpModal";
 import KeyboardHelp from "../KeyboardHelp";
 
@@ -16,7 +15,9 @@ export default function Layout({ children }: { children: ReactNode }) {
       </a>
       <Onboarding />
       <Search />
-      <Toast />
+      {/* Toast is mounted in App, not here: the immersive routes render outside
+          this layout, so a host inside it left the quiz and flashcard sessions
+          unable to show the user anything at all. */}
       <LevelUpModal />
       <KeyboardHelp />
       <Sidebar />
