@@ -5,8 +5,10 @@ import {
   checkAchievements,
   detectLevelUp,
   retryPendingChecks,
+  labelsFor,
   ALL_UNLOCK_IDS,
   MAX_CHECK_ATTEMPTS,
+  BATCH_LABEL,
 } from "./engine";
 import { ACHIEVEMENT_DEFS } from "../../data/achievements";
 import { LEVEL_XP_THRESHOLDS } from "../../lib/xp";
@@ -497,6 +499,166 @@ describe("failed achievement checks", () => {
     expect(toasts).toHaveLength(1);
     expect(toasts[0].variant).toBe("warn");
     expect(toasts[0].title).toBe("Couldn't check for new achievements");
+  });
+
+  /* ── interrupted batches ───────────────────────────────────────────────── */
+
+  /**
+   * The per-check rows recover a check that threw. They cannot recover a batch
+   * that never ran: close the tab mid-award and nothing records that the event
+   * happened at all, so there is nothing to replay and the badge is gone.
+   *
+   * A marker row written before the checks and deleted after them is that
+   * record. The regression risk is the opposite of the original bug — a marker
+   * that is written and never cleared would replay on every launch forever — so
+   * the leak case is asserted first.
+   */
+  it("leaves nothing behind when the batch completes", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+    expect(await db.pendingChecks.count()).toBe(0);
+  });
+
+  it("marks the batch as started before running anything", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    // Observed from inside the batch: the marker has to exist while the checks
+    // are running, or an interruption has nothing to find.
+    let markerDuringRun = 0;
+    // Cast because Dexie's count() is typed as a PromiseExtended, which a plain
+    // async function cannot satisfy. The code under test only awaits it.
+    vi.spyOn(db.attempts, "count").mockImplementation((async () => {
+      markerDuringRun = await db.pendingChecks
+        .filter((r) => r.label === BATCH_LABEL)
+        .count();
+      return 1;
+    }) as unknown as typeof db.attempts.count);
+
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+    expect(markerDuringRun).toBe(1);
+  });
+
+  it("replays the whole batch from a leftover marker", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    // What an interrupted batch leaves: the marker, and no per-check rows.
+    await db.pendingChecks.put({
+      id: `quiz-complete:${BATCH_LABEL}:e1`,
+      label: BATCH_LABEL,
+      event: { kind: "quiz-complete", attemptId: "e1" },
+      firstFailedAt: "2026-01-01T00:00:00.000Z",
+      lastFailedAt: "2026-01-01T00:00:00.000Z",
+      attempts: 0,
+    });
+
+    await retryPendingChecks();
+
+    const ids = await unlocked();
+    expect(ids).toContain("first-blood");
+    expect(ids).toContain("boss-1-pass");
+    expect(await db.pendingChecks.count()).toBe(0);
+  });
+
+  it("does not re-award when the batch had in fact finished", async () => {
+    await db.profile.put(profileRow(0));
+    await db.attempts.add(fullExam("e1", 92, 30));
+    await checkAchievements({ kind: "quiz-complete", attemptId: "e1" });
+    const xp = (await db.profile.get(1))!.xp;
+
+    // A marker that outlived its batch — the delete failed, say.
+    await db.pendingChecks.put({
+      id: `quiz-complete:${BATCH_LABEL}:e1`,
+      label: BATCH_LABEL,
+      event: { kind: "quiz-complete", attemptId: "e1" },
+      firstFailedAt: "2026-01-01T00:00:00.000Z",
+      lastFailedAt: "2026-01-01T00:00:00.000Z",
+      attempts: 0,
+    });
+    await retryPendingChecks();
+
+    expect((await db.profile.get(1))!.xp).toBe(xp);
+    expect(await db.pendingChecks.count()).toBe(0);
+  });
+
+  // The replay covers every check for the event, so a single-check row for the
+  // same event is redundant work rather than a second chance.
+  it("clears single-check rows that its batch replay covers", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    await db.pendingChecks.bulkPut([
+      {
+        id: `quiz-complete:${BATCH_LABEL}:e1`,
+        label: BATCH_LABEL,
+        event: { kind: "quiz-complete", attemptId: "e1" },
+        firstFailedAt: "2026-01-01T00:00:00.000Z",
+        lastFailedAt: "2026-01-01T00:00:00.000Z",
+        attempts: 0,
+      },
+      {
+        id: "quiz-complete:first-blood:e1",
+        label: "first-blood",
+        event: { kind: "quiz-complete", attemptId: "e1" },
+        firstFailedAt: "2026-01-01T00:00:00.000Z",
+        lastFailedAt: "2026-01-01T00:00:00.000Z",
+        attempts: 1,
+      },
+    ]);
+
+    await retryPendingChecks();
+    expect(await db.pendingChecks.count()).toBe(0);
+    expect(await unlocked()).toContain("first-blood");
+  });
+
+  // A check that fails *during* the replay must keep its fresh row, not have it
+  // deleted as part of the batch clean-up.
+  it("keeps a row for a check that fails again during the replay", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    await db.pendingChecks.put({
+      id: `quiz-complete:${BATCH_LABEL}:e1`,
+      label: BATCH_LABEL,
+      event: { kind: "quiz-complete", attemptId: "e1" },
+      firstFailedAt: "2026-01-01T00:00:00.000Z",
+      lastFailedAt: "2026-01-01T00:00:00.000Z",
+      attempts: 0,
+    });
+    breakFirstBlood();
+
+    await retryPendingChecks();
+
+    const left = await db.pendingChecks.toArray();
+    expect(left.map((r) => r.label)).toEqual(["first-blood"]);
+  });
+
+  it("gives up on a marker that keeps coming back", async () => {
+    await db.attempts.add(fullExam("e1", 92, 30));
+    await db.pendingChecks.put({
+      id: `quiz-complete:${BATCH_LABEL}:e1`,
+      label: BATCH_LABEL,
+      event: { kind: "quiz-complete", attemptId: "e1" },
+      firstFailedAt: "2026-01-01T00:00:00.000Z",
+      lastFailedAt: "2026-01-01T00:00:00.000Z",
+      attempts: MAX_CHECK_ATTEMPTS - 1,
+    });
+
+    await retryPendingChecks();
+
+    expect(await db.pendingChecks.count()).toBe(0);
+    const toasts = useToast.getState().toasts.filter((t) => t.variant === "warn");
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].title).toBe("Couldn't check for new achievements");
+  });
+
+  // A collision would make a real failure look like an unfinished batch.
+  it("reserves the batch label so no real check can claim it", () => {
+    const events: Parameters<typeof checkAchievements>[0][] = [
+      { kind: "quest-complete", questId: "q", week: 1, day: 1 },
+      { kind: "quiz-complete", attemptId: "a" },
+      { kind: "flashcard-review", reviewedToday: 1, totalDeck: 1 },
+      { kind: "level-up", previousLevel: 1, newLevel: 2 },
+      { kind: "streak", streak: 7 },
+      { kind: "vault-quick-test", tableId: "t", scorePct: 100 },
+      { kind: "vault-order-win", gameId: "g" },
+    ];
+    for (const e of events) {
+      expect(labelsFor(e)).not.toContain(BATCH_LABEL);
+    }
   });
 
   // Transient failures are not worth interrupting for: a retry is coming and

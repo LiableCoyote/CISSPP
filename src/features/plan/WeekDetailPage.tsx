@@ -5,7 +5,12 @@ import { WEEK_META } from "../../data/weeks";
 import { useProfile } from "../../state/profile";
 import { checkAchievements } from "../achievements/engine";
 import { pushToast } from "../../state/toast";
-import { logStudySession } from "../../lib/session";
+// Aliased: the handler below is also called completeQuest, and the local
+// binding would otherwise shadow the import silently.
+import { completeQuest as awardQuest, undoQuestCompletion } from "../../lib/awards";
+import { publishLastActive } from "../../lib/reminders";
+import { reportFailure } from "../../lib/failure";
+import { format } from "date-fns";
 import EmptyState from "../../components/ui/EmptyState";
 
 /** Rough minutes credited per quest type, used for the study log. */
@@ -23,7 +28,7 @@ export default function WeekDetailPage() {
   const week = parseInt(n || "1", 10);
   const meta = WEEK_META.find((w) => w.week === week);
   const quests = useLiveQuery(() => db.quests.where("week").equals(week).toArray(), [week]);
-  const { profile, updateProfile, refreshProfile } = useProfile();
+  const { profile, refreshProfile } = useProfile();
 
   if (!meta || !profile) return null;
 
@@ -36,16 +41,23 @@ export default function WeekDetailPage() {
 
   const completeQuest = async (q: Quest) => {
     if (q.completedAt) return;
-    await db.quests.update(q.id, { completedAt: new Date().toISOString() });
-    // Grant XP
-    await updateProfile({ xp: profile.xp + q.xp });
-    const streakPatch = await logStudySession(profile, {
-      minutes: QUEST_MINUTES[q.type] ?? QUEST_MINUTES.default,
-      questsCompleted: 1,
-    });
-    if (Object.keys(streakPatch).length > 0) {
-      await updateProfile(streakPatch);
+
+    // Same transaction treatment as the quiz claim, and for the same reason:
+    // marking the quest done before crediting anything is only safe if a
+    // failure undoes the mark.
+    try {
+      await awardQuest(profile, q, QUEST_MINUTES[q.type] ?? QUEST_MINUTES.default);
+    } catch (err) {
+      reportFailure(
+        "record that quest",
+        err,
+        "It's still marked incomplete, so ticking it again will retry.",
+      );
+      return;
     }
+
+    await publishLastActive(format(new Date(), "yyyy-MM-dd"));
+
     // Haptic on mobile
     if ("vibrate" in navigator) navigator.vibrate(10);
 
@@ -58,14 +70,19 @@ export default function WeekDetailPage() {
       durationMs: 2800,
     });
 
-    await checkAchievements({ kind: "quest-complete", questId: q.id, week: q.week, day: q.day });
     await refreshProfile();
+    await checkAchievements({ kind: "quest-complete", questId: q.id, week: q.week, day: q.day });
   };
 
   const undoQuest = async (q: Quest) => {
     if (!q.completedAt) return;
-    await db.quests.update(q.id, { completedAt: null });
-    await updateProfile({ xp: Math.max(0, profile.xp - q.xp) });
+    try {
+      await undoQuestCompletion(q);
+    } catch (err) {
+      reportFailure("undo that quest", err);
+      return;
+    }
+    await refreshProfile();
   };
 
   const dayNumbers = [1, 2, 3, 4, 5, 6, 7];

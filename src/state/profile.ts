@@ -9,6 +9,19 @@ interface ProfileStore {
   loading: boolean;
   initProfile: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  /**
+   * Adds to the stored XP, reading it inside a transaction rather than from a
+   * snapshot.
+   *
+   * Every award used to compute `profile.xp + delta` from whatever the store or
+   * a React render last saw, and write that absolute total. `unlock()` in the
+   * achievement engine reads the row fresh and adds badge XP, so a badge landing
+   * between the read and the write was silently overwritten — and two awards in
+   * the same tick lost one of themselves the same way.
+   *
+   * `delta` may be negative (undoing a quest); the total is clamped at zero.
+   */
+  addXp: (delta: number, patch?: Partial<Profile>) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -41,6 +54,17 @@ export const useProfile = create<ProfileStore>((set, get) => ({
   updateProfile: async (updates) => {
     const prev = get().profile;
     await db.profile.update(1, updates);
+    const p = (await db.profile.get(1)) || null;
+    set({ profile: p });
+    handleLevelTransition(prev, p);
+  },
+  addXp: async (delta, patch) => {
+    const prev = get().profile;
+    await db.transaction("rw", db.profile, async () => {
+      const row = await db.profile.get(1);
+      if (!row) return;
+      await db.profile.update(1, { ...patch, xp: Math.max(0, row.xp + delta) });
+    });
     const p = (await db.profile.get(1)) || null;
     set({ profile: p });
     handleLevelTransition(prev, p);

@@ -14,7 +14,7 @@ type Quality = 0 | 1 | 3 | 4;
 
 export default function ReviewSession() {
   const navigate = useNavigate();
-  const { profile, updateProfile, refreshProfile } = useProfile();
+  const { profile, addXp, refreshProfile } = useProfile();
   // Frozen at session start. Recomputing `new Date()` each render would let a
   // card that falls due mid-session appear unexpectedly.
   const [sessionStart] = useState(() => new Date().toISOString());
@@ -104,7 +104,10 @@ export default function ReviewSession() {
       minutes: 1,
       flashcardsReviewed: 1,
     });
-    await updateProfile({ xp: current.xp + xpGain, ...streakPatch });
+    // addXp rather than an absolute total: reading the store fresh above closed
+    // the fast-keyboard-grading gap, but not the one where the achievement
+    // engine writes XP straight to Dexie between that read and this write.
+    await addXp(xpGain, streakPatch);
 
     if ("vibrate" in navigator) navigator.vibrate(5);
 

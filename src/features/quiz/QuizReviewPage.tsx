@@ -1,16 +1,19 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
+import { format } from "date-fns";
 import { db, type QuizAnswer } from "../../db/schema";
 import { ALL_QUESTIONS } from "../../data/questions.seed";
 import { useProfile } from "../../state/profile";
 import { checkAchievements } from "../achievements/engine";
-import { logStudySession } from "../../lib/session";
-import { quizXp } from "../../lib/rewards";
+import { claimQuizAttempt } from "../../lib/awards";
+import { publishLastActive } from "../../lib/reminders";
+import { reportFailure } from "../../lib/failure";
+import { pushToast } from "../../state/toast";
 
 export default function QuizReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { profile, updateProfile, refreshProfile } = useProfile();
+  const { profile, refreshProfile } = useProfile();
 
   const attempt = useLiveQuery(() => db.attempts.get(id!), [id]);
   const answers = useLiveQuery(
@@ -30,23 +33,58 @@ export default function QuizReviewPage() {
   const addToFlashcards = async (answer: QuizAnswer) => {
     const q = ALL_QUESTIONS.find((x) => x.id === answer.questionId);
     if (!q) return;
+    const cardId = `miss-${answer.id}`;
+
+    // The id is derived from the answer, so a second tap used to throw
+    // ConstraintError as an unhandled rejection — and the first tap gave no
+    // feedback beyond a 5ms vibrate, so tapping twice was the natural thing to
+    // do. Deliberately not a put(): the row carries SM-2 scheduling state, and
+    // overwriting would reset the schedule on a card already being revised.
+    try {
+      if (await db.flashcards.get(cardId)) {
+        pushToast({
+          variant: "info",
+          icon: "📇",
+          title: "Already in your deck",
+          body: "This one was added earlier — its review schedule is untouched.",
+          durationMs: 2500,
+        });
+        return;
+      }
+    } catch (err) {
+      reportFailure("add that to your flashcards", err);
+      return;
+    }
+
     const now = new Date().toISOString();
-    await db.flashcards.add({
-      id: `miss-${answer.id}`,
-      front: q.prompt,
-      back: `Correct: ${q.options[q.answerIndex]}\n\n${q.explanation}`,
-      domainId: q.domainId,
-      tags: ["quiz-miss", ...q.tags],
-      ease: 2.5,
-      interval: 0,
-      reps: 0,
-      lapses: 0,
-      dueAt: now,
-      lastReviewedAt: null,
-      createdAt: now,
-      source: "quiz-miss",
-    });
+    try {
+      await db.flashcards.add({
+        id: cardId,
+        front: q.prompt,
+        back: `Correct: ${q.options[q.answerIndex]}\n\n${q.explanation}`,
+        domainId: q.domainId,
+        tags: ["quiz-miss", ...q.tags],
+        ease: 2.5,
+        interval: 0,
+        reps: 0,
+        lapses: 0,
+        dueAt: now,
+        lastReviewedAt: null,
+        createdAt: now,
+        source: "quiz-miss",
+      });
+    } catch (err) {
+      reportFailure("add that to your flashcards", err);
+      return;
+    }
     if ("vibrate" in navigator) navigator.vibrate(5);
+    pushToast({
+      variant: "success",
+      icon: "📇",
+      title: "Added to your flashcards",
+      body: "It'll come round in your next review session.",
+      durationMs: 2500,
+    });
   };
 
   const claimed = !!attempt.claimedAt;
@@ -59,21 +97,27 @@ export default function QuizReviewPage() {
       navigate("/");
       return;
     }
-    await db.attempts.update(attempt.id, { claimedAt: new Date().toISOString() });
 
-    // XP based on accuracy
-    await updateProfile({ xp: profile.xp + quizXp(attempt.scorePct, attempt.mode) });
+    // One transaction, in lib/awards.ts so the rollback is testable without a
+    // DOM. Claiming first and awarding afterwards is only safe if a failure
+    // undoes the claim, and it didn't.
+    try {
+      await claimQuizAttempt(profile, attempt);
+    } catch (err) {
+      reportFailure(
+        "save your quiz result",
+        err,
+        "Nothing was recorded, and the attempt is still unclaimed — tap Claim again to retry.",
+      );
+      return;
+    }
 
-    // Shared helper rather than a local copy: this used to subtract a fixed
-    // 86_400_000 ms to find "yesterday", which lands on the same calendar date
-    // across a spring-forward DST change and silently breaks the streak.
-    const streakPatch = await logStudySession(profile, {
-      minutes: Math.max(1, Math.round(attempt.totalSeconds / 60)),
-    });
-    if (Object.keys(streakPatch).length > 0) await updateProfile(streakPatch);
-
-    await checkAchievements({ kind: "quiz-complete", attemptId: attempt.id });
+    // Everything below is outside the transaction on purpose: a Cache API
+    // write, a store sync, and the achievement checks, which do their own
+    // writes and have their own retry queue.
+    await publishLastActive(format(new Date(), "yyyy-MM-dd"));
     await refreshProfile();
+    await checkAchievements({ kind: "quiz-complete", attemptId: attempt.id });
     navigate("/");
   };
 
