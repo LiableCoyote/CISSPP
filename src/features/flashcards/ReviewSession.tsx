@@ -1,20 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { db, type Flashcard } from "../../db/schema";
-import { sm2, nextReviewDate } from "./srs";
+import { gradeCard } from "./grade";
 import { useProfile } from "../../state/profile";
 import { format } from "date-fns";
 import { checkAchievements } from "../achievements/engine";
-import { logStudySession } from "../../lib/session";
-import { flashcardXp } from "../../lib/rewards";
+import { publishLastActive } from "../../lib/reminders";
+import { reportFailure } from "../../lib/failure";
 
 type Quality = 0 | 1 | 3 | 4;
 
 export default function ReviewSession() {
   const navigate = useNavigate();
-  const { profile, addXp, refreshProfile } = useProfile();
+  const { profile, refreshProfile } = useProfile();
   // Frozen at session start. Recomputing `new Date()` each render would let a
   // card that falls due mid-session appear unexpectedly.
   const [sessionStart] = useState(() => new Date().toISOString());
@@ -24,6 +24,8 @@ export default function ReviewSession() {
   );
   const [revealed, setRevealed] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
+  // Held across the awaits in grade(), which is where the second tap lands.
+  const grading = useRef(false);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -79,48 +81,46 @@ export default function ReviewSession() {
 
   async function grade(quality: Quality) {
     if (!profile) return;
-    const result = sm2(
-      { ease: card.ease, interval: card.interval, reps: card.reps, lapses: card.lapses },
-      quality,
-    );
-    const next = nextReviewDate(new Date(), result.interval);
-    await db.flashcards.update(card.id, {
-      ease: result.ease,
-      interval: result.interval,
-      reps: result.reps,
-      lapses: result.lapses,
-      dueAt: next.toISOString(),
-      lastReviewedAt: new Date().toISOString(),
-    });
-    // Read fresh rather than from the render closure: keyboard grading can fire
-    // faster than refreshProfile settles, which dropped XP.
-    const current = useProfile.getState().profile ?? profile;
-    const xpGain = flashcardXp(quality);
+    // The database guard in gradeCard is what makes a double-grade *correct*;
+    // this just stops the second tap making a pointless round-trip and keeps
+    // the UI from reacting twice. Both are needed — a ref does not survive a
+    // remount, and the guard alone would still let the counter tick.
+    if (grading.current) return;
+    grading.current = true;
 
-    // Through the shared helper, like the quiz, quest and Vault paths. This was
-    // the last surface writing studyLog by hand, and the only one that never
-    // advanced the streak — in a spaced-repetition app.
-    const streakPatch = await logStudySession(current, {
-      minutes: 1,
-      flashcardsReviewed: 1,
-    });
-    // addXp rather than an absolute total: reading the store fresh above closed
-    // the fast-keyboard-grading gap, but not the one where the achievement
-    // engine writes XP straight to Dexie between that read and this write.
-    await addXp(xpGain, streakPatch);
+    try {
+      const outcome = await gradeCard(card.id, quality, sessionStart);
+      if (outcome !== "graded") return;
 
-    if ("vibrate" in navigator) navigator.vibrate(5);
+      // Outside the transaction: a Cache API write, the same arrangement the
+      // quiz claim uses.
+      await publishLastActive(format(new Date(), "yyyy-MM-dd"));
 
-    const today = format(new Date(), "yyyy-MM-dd");
-    const reviewedToday = (await db.studyLog.get(today))?.flashcardsReviewed ?? 1;
-    const totalDeck = await db.flashcards.count();
-    await checkAchievements({ kind: "flashcard-review", reviewedToday, totalDeck });
-    await refreshProfile();
+      if ("vibrate" in navigator) navigator.vibrate(5);
 
-    setRevealed(false);
-    setReviewedCount((n) => n + 1);
-    x.set(0);
-    y.set(0);
+      const today = format(new Date(), "yyyy-MM-dd");
+      const reviewedToday = (await db.studyLog.get(today))?.flashcardsReviewed ?? 1;
+      const totalDeck = await db.flashcards.count();
+      await checkAchievements({ kind: "flashcard-review", reviewedToday, totalDeck });
+      await refreshProfile();
+
+      // Only on a real grade. Counting an "already" here would put the
+      // inflation back by hand, on the very number the badges read.
+      setReviewedCount((n) => n + 1);
+      setRevealed(false);
+    } catch (err) {
+      // `revealed` is deliberately left alone: the schedule is unchanged, so
+      // the honest thing is to leave the answer up and let the user grade again.
+      reportFailure(
+        "save that review",
+        err,
+        "The card's schedule is unchanged — grade it again to retry.",
+      );
+    } finally {
+      grading.current = false;
+      x.set(0);
+      y.set(0);
+    }
   }
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
